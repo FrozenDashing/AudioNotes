@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database_helper.dart';
 import '../models/todo_item.dart';
@@ -81,23 +83,26 @@ class RecordingNotifier extends Notifier<RecordingState> {
     }
   }
 
-  /// Stop recording and trigger recognition workflow
+  /// Stop recording, create a placeholder todo, and continue recognition in the background.
   Future<void> stop() async {
     try {
-      state = RecordingState.recognizing;
+      final recorder = ref.read(recorderServiceProvider);
+      final repository = ref.read(todoRepositoryProvider);
 
-      // Execute the complete workflow: record → recognize → create todo
-      final useCase = ref.read(createTodoUseCaseProvider);
-      await useCase.execute();
+      final wavPath = await recorder.stopRecording();
+      if (wavPath == null || wavPath.isEmpty) {
+        throw Exception('录音文件生成失败');
+      }
 
-      state = RecordingState.completed;
+      final todo = await repository.insertRecognizing(audioPath: wavPath);
 
-      // ✅ Refresh todo list to show the newly created todo
+      // Return to idle immediately so the next recording can start right away.
+      state = RecordingState.idle;
+
+      // Show the placeholder item immediately.
       await ref.read(todoListProvider.notifier).loadTodos();
 
-      // Reset to idle after a short delay
-      await Future.delayed(const Duration(seconds: 1));
-      state = RecordingState.idle;
+      unawaited(_recognizeRecordingInBackground(todo.id, wavPath));
     } catch (e) {
       print('Recording workflow failed: $e');
       state = RecordingState.failed;
@@ -106,6 +111,37 @@ class RecordingNotifier extends Notifier<RecordingState> {
       await Future.delayed(const Duration(seconds: 2));
       state = RecordingState.idle;
       rethrow;
+    }
+  }
+
+  Future<void> _recognizeRecordingInBackground(
+    String todoId,
+    String wavPath,
+  ) async {
+    final recognition = ref.read(recognitionServiceProvider);
+    final repository = ref.read(todoRepositoryProvider);
+
+    try {
+      var text = await recognition.recognize(wavPath);
+
+      if (text == null || text.isEmpty) {
+        throw Exception('未能识别语音内容');
+      }
+
+      text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      await repository.completeRecognition(
+        id: todoId,
+        text: text,
+        modelVersion: 'vosk-model-small-cn-0.22',
+      );
+    } catch (e) {
+      await repository.markFailed(
+        id: todoId,
+        errorMessage: e.toString(),
+      );
+    } finally {
+      await ref.read(todoListProvider.notifier).loadTodos();
     }
   }
 

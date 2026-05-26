@@ -16,12 +16,80 @@ class TodoItemCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(todoListProvider);
+    final theme = Theme.of(context);
     final confidenceLevel = ConfidenceLevel.fromValue(todo.confidence);
     final notifier = ref.read(todoListProvider.notifier);
     final isSelected = notifier.isSelected(todo.id);
+    final isCompleted = todo.status == TodoStatus.completed;
+    final isRecognizing = todo.taskState == TodoTaskState.recognizing;
+    final hasInlineAudioPlayer = !isCompleted &&
+        todo.audioPath != null &&
+        todo.audioPath!.isNotEmpty &&
+        todo.taskState == TodoTaskState.ready;
+
+    if (isRecognizing) {
+      return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        color: theme.colorScheme.surfaceVariant.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.5 : 0.8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '转录中...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '正在将语音转换为文字',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      color: isCompleted
+          ? theme.colorScheme.surfaceVariant.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.55 : 0.7,
+            )
+          : null,
       child: ListTile(
         leading: InkResponse(
           onTap: () => notifier.toggleSelection(todo.id),
@@ -52,12 +120,8 @@ class TodoItemCard extends ConsumerWidget {
               todo.text.isEmpty ? '识别中...' : todo.text,
               style: TextStyle(
                 fontSize: 16,
-                decoration: todo.status == TodoStatus.completed
-                    ? TextDecoration.lineThrough
-                    : null,
-                color: todo.status == TodoStatus.completed
-                    ? Theme.of(context).colorScheme.onSurfaceVariant
-                    : null,
+                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                color: isCompleted ? theme.colorScheme.onSurfaceVariant : null,
               ),
             ),
             if (todo.taskState == TodoTaskState.recognizing)
@@ -83,9 +147,7 @@ class TodoItemCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Audio player if audio file exists
-            if (todo.audioPath != null &&
-                todo.audioPath!.isNotEmpty &&
-                todo.taskState == TodoTaskState.ready)
+            if (hasInlineAudioPlayer)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: AudioPlayerWidget(audioPath: todo.audioPath!),
@@ -140,7 +202,7 @@ class TodoItemCard extends ConsumerWidget {
           ],
         ),
         onTap: () => _showEditDialog(context, notifier),
-        onLongPress: () => _showOptionsBottomSheet(context, notifier),
+        onLongPress: () => _showOptionsBottomSheet(context, ref, notifier),
       ),
     );
   }
@@ -207,7 +269,9 @@ class TodoItemCard extends ConsumerWidget {
   }
 
   void _showOptionsBottomSheet(
-      BuildContext context, TodoListNotifier notifier) {
+      BuildContext context, WidgetRef ref, TodoListNotifier notifier) {
+    final isCompleted = todo.status == TodoStatus.completed;
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -223,11 +287,15 @@ class TodoItemCard extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.mic),
-              title: const Text('Re-record'),
+              leading: Icon(isCompleted ? Icons.play_arrow : Icons.mic),
+              title: Text(isCompleted ? 'Playback' : 'Re-record'),
               onTap: () {
                 Navigator.pop(context);
-                _reRecord(context);
+                if (isCompleted) {
+                  _playback(context, ref);
+                } else {
+                  _reRecord(context);
+                }
               },
             ),
             ListTile(
@@ -249,6 +317,28 @@ class TodoItemCard extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Re-record feature coming soon')),
     );
+  }
+
+  Future<void> _playback(BuildContext context, WidgetRef ref) async {
+    final audioPath = todo.audioPath;
+    if (audioPath == null || audioPath.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('没有可播放的音频')),
+        );
+      }
+      return;
+    }
+
+    try {
+      await ref.read(audioPlaybackServiceProvider).play(audioPath);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('播放失败: $e')),
+        );
+      }
+    }
   }
 
   void _confirmDelete(BuildContext context, TodoListNotifier notifier) {
