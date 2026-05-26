@@ -249,6 +249,7 @@ class TodoItemCard extends ConsumerWidget {
   void _showOptionsBottomSheet(
       BuildContext context, WidgetRef ref, TodoListNotifier notifier) {
     final isCompleted = todo.status == TodoStatus.completed;
+    final hasAudio = todo.audioPath != null && todo.audioPath!.isNotEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -264,18 +265,24 @@ class TodoItemCard extends ConsumerWidget {
                 _showEditDialog(context, notifier);
               },
             ),
-            ListTile(
-              leading: Icon(isCompleted ? Icons.play_arrow : Icons.mic),
-              title: Text(isCompleted ? 'Playback' : 'Re-record'),
-              onTap: () {
-                Navigator.pop(context);
-                if (isCompleted) {
+            if (hasAudio)
+              ListTile(
+                leading: const Icon(Icons.play_arrow),
+                title: const Text('Playback'),
+                onTap: () {
+                  Navigator.pop(context);
                   _playback(context, ref);
-                } else {
+                },
+              ),
+            if (!isCompleted)
+              ListTile(
+                leading: const Icon(Icons.mic),
+                title: const Text('Re-record'),
+                onTap: () {
+                  Navigator.pop(context);
                   _reRecord(context, ref);
-                }
-              },
-            ),
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
