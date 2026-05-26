@@ -57,6 +57,7 @@ class TodoRepository {
     required String text,
     int? durationMs,
     String? modelVersion,
+    double? confidence,
   }) async {
     final todo = await _dbHelper.getTodoById(id);
     if (todo != null) {
@@ -65,6 +66,7 @@ class TodoRepository {
         taskState: TodoTaskState.ready,
         durationMs: durationMs,
         modelVersion: modelVersion,
+        confidence: confidence,
         updatedAt: DateTime.now(),
       );
       await _dbHelper.updateTodo(updated);

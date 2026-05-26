@@ -44,11 +44,24 @@ class CreateTodoFromRecordingUseCase {
       // ✅ Clean up extra spaces: replace multiple consecutive spaces with single space and trim
       text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
-      // Step 4: Complete recognition successfully
+      // Step 4: Complete recognition successfully with heuristic confidence
+      double computeConfidence(String t) {
+        final len = t.length;
+        if (len < 4) return 0.3;
+        final base = ((len.clamp(4, 200) - 4) / 196).clamp(0.0, 1.0);
+        var conf = 0.5 + base * 0.45;
+        final cjkCount = RegExp(r'[\u4E00-\u9FFF]').allMatches(t).length;
+        if (cjkCount / len > 0.5) conf = (conf + 0.05).clamp(0.0, 1.0);
+        return conf;
+      }
+
+      final confidence = computeConfidence(text);
+
       await _repository.completeRecognition(
         id: todoId,
         text: text,
         modelVersion: 'vosk-model-small-cn-0.22',
+        confidence: confidence,
       );
 
       print('Todo created successfully: $todoId');

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/todo_item.dart';
 import '../providers/app_providers.dart';
-import 'audio_player_widget.dart';
+import 'completed_text.dart';
 
 /// Individual todo item card widget
 class TodoItemCard extends ConsumerWidget {
@@ -17,15 +17,10 @@ class TodoItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(todoListProvider);
     final theme = Theme.of(context);
-    final confidenceLevel = ConfidenceLevel.fromValue(todo.confidence);
     final notifier = ref.read(todoListProvider.notifier);
     final isSelected = notifier.isSelected(todo.id);
     final isCompleted = todo.status == TodoStatus.completed;
     final isRecognizing = todo.taskState == TodoTaskState.recognizing;
-    final hasInlineAudioPlayer = !isCompleted &&
-        todo.audioPath != null &&
-        todo.audioPath!.isNotEmpty &&
-        todo.taskState == TodoTaskState.ready;
 
     if (isRecognizing) {
       return Card(
@@ -33,51 +28,55 @@ class TodoItemCard extends ConsumerWidget {
         color: theme.colorScheme.surfaceContainerHighest.withValues(
           alpha: theme.brightness == Brightness.dark ? 0.5 : 0.8,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onLongPress: () => _confirmDelete(context, notifier),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '转录中...',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '转录中...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '正在将语音转换为文字',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 4),
+                      Text(
+                        '正在将语音转换为文字',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -91,6 +90,7 @@ class TodoItemCard extends ConsumerWidget {
             )
           : null,
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: InkResponse(
           onTap: () => notifier.toggleSelection(todo.id),
           radius: 24,
@@ -117,13 +117,32 @@ class TodoItemCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              todo.text.isEmpty ? '识别中...' : todo.text,
+              _formatDateTime(todo.createdAt),
               style: TextStyle(
-                fontSize: 16,
-                decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? theme.colorScheme.onSurfaceVariant : null,
+                fontSize: 11,
+                height: 1.1,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+            const SizedBox(height: 2),
+            if (isCompleted)
+              CompletedText(
+                text: todo.text.isEmpty ? '识别中...' : todo.text,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.2,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              Text(
+                todo.text.isEmpty ? '识别中...' : todo.text,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.2,
+                  color: null,
+                ),
+              ),
             if (todo.taskState == TodoTaskState.recognizing)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
@@ -139,47 +158,6 @@ class TodoItemCard extends ConsumerWidget {
                     fontSize: 12,
                     color: Colors.red,
                   ),
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Audio player if audio file exists
-            if (hasInlineAudioPlayer)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: AudioPlayerWidget(audioPath: todo.audioPath!),
-              ),
-
-            Text(
-              _formatDateTime(todo.createdAt),
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (confidenceLevel == ConfidenceLevel.low &&
-                todo.taskState == TodoTaskState.ready)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 14,
-                      color: Colors.orange[700],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Recognition may be inaccurate',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange[700],
-                      ),
-                    ),
-                  ],
                 ),
               ),
           ],

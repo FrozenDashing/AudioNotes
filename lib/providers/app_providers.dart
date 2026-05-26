@@ -103,13 +103,17 @@ class RecordingNotifier extends Notifier<RecordingState> {
       _replacementTodoId = null;
       _replacementOldAudioPath = null;
 
+      String? todoId;
+
       if (replacingTodoId != null) {
         await repository.updateToRecognizing(
           replacingTodoId,
           audioPath: wavPath,
         );
+        todoId = replacingTodoId;
       } else {
-        await repository.insertRecognizing(audioPath: wavPath);
+        final todo = await repository.insertRecognizing(audioPath: wavPath);
+        todoId = todo.id;
       }
 
       if (replacingOldAudioPath != null &&
@@ -130,7 +134,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
 
       unawaited(
         _recognizeRecordingInBackground(
-          replacingTodoId,
+          todoId,
           wavPath,
         ),
       );
@@ -153,19 +157,129 @@ class RecordingNotifier extends Notifier<RecordingState> {
     final repository = ref.read(todoRepositoryProvider);
 
     try {
-      var text = await recognition.recognize(wavPath);
+      // Ensure model is ready. If not, attempt reload once.
+      final ready = await recognition.isModelReady();
+      if (!ready) {
+        await recognition.reloadModel();
+      }
 
-      if (text == null || text.isEmpty) {
+      // Try recognition with a few retries and exponential backoff using
+      // the detailed recognizer which may return ASR-provided confidence.
+      Map<String, dynamic>? detailed;
+      const maxAttempts = 3;
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          final result = await recognition
+              .recognizeDetailed(wavPath)
+              .timeout(const Duration(seconds: 30), onTimeout: () {
+            throw TimeoutException('Recognition timed out');
+          });
+
+          if (result != null && (result['text'] ?? '').toString().isNotEmpty) {
+            detailed = Map<String, dynamic>.from(result);
+            break;
+          } else {
+            throw Exception('Empty recognition result');
+          }
+        } catch (e) {
+          if (attempt < maxAttempts) {
+            await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
+            continue;
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      if (detailed == null || (detailed['text'] ?? '').toString().isEmpty) {
         throw Exception('未能识别语音内容');
       }
 
-      text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+      // Normalize whitespace first and operate on a non-null local copy
+      var processed =
+          detailed['text'].toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      // Remove spaces between Chinese characters (keep spaces for Latin)
+      final cjkPair = RegExp(r'([\u4E00-\u9FFF])\s+([\u4E00-\u9FFF])');
+      while (cjkPair.hasMatch(processed)) {
+        processed =
+            processed.replaceAllMapped(cjkPair, (m) => '${m[1]}${m[2]}');
+      }
+
+      // Basic sentence end heuristic: ensure punctuation at end of text
+      final endsPunct = RegExp(r'[.!?。？，、]$');
+      if (!endsPunct.hasMatch(processed)) {
+        // If contains CJK characters use Chinese period
+        if (RegExp(r'[\u4E00-\u9FFF]').hasMatch(processed)) {
+          processed = '$processed。';
+        } else {
+          processed = '$processed.';
+        }
+      }
+
+      // Compute a heuristic confidence score based on text and simple audio cues
+      double computeTextHeuristic(String t) {
+        final len = t.length;
+        if (len < 4) return 0.3;
+        final base = ((len.clamp(4, 200) - 4) / 196).clamp(0.0, 1.0);
+        var conf = 0.5 + base * 0.45; // 0.5..0.95
+        final cjkCount = RegExp(r'[\u4E00-\u9FFF]').allMatches(t).length;
+        if (cjkCount / len > 0.5) conf = (conf + 0.05).clamp(0.0, 1.0);
+        return conf;
+      }
+
+      Future<double> computeAudioQuality(String path) async {
+        try {
+          final file = File(path);
+          if (!await file.exists()) return 0.5;
+          final bytes = await file.readAsBytes();
+          if (bytes.length <= 44) return 0.5;
+          final pcm = bytes.sublist(44);
+          final sampleCount = pcm.length ~/ 2;
+          if (sampleCount == 0) return 0.5;
+
+          int silent = 0;
+          const int threshold = 500; // low amplitude threshold
+          for (var i = 0; i < pcm.length; i += 2) {
+            final lo = pcm[i];
+            final hi = pcm[i + 1];
+            int sample = (hi << 8) | (lo & 0xFF);
+            if (sample & 0x8000 != 0) sample = sample - 0x10000;
+            if (sample.abs() < threshold) silent++;
+          }
+
+          final silenceRatio = silent / sampleCount;
+          final durationMs = (pcm.length / (16000 * 2) * 1000).toDouble();
+          final durationFactor =
+              (durationMs / 30000).clamp(0.0, 1.0); // favour up to 30s
+          final quality = (1.0 - silenceRatio) * 0.7 + durationFactor * 0.3;
+          return quality.clamp(0.0, 1.0);
+        } catch (_) {
+          return 0.5;
+        }
+      }
+
+      final textHeuristic = computeTextHeuristic(processed);
+      final audioQuality = await computeAudioQuality(wavPath);
+
+      // Combine ASR confidence (if present) with heuristics
+      final asrConfRaw = detailed['confidence'];
+      double finalConfidence;
+      if (asrConfRaw is num) {
+        final asrConf = asrConfRaw.toDouble().clamp(0.0, 1.0);
+        finalConfidence =
+            (asrConf * 0.7) + (textHeuristic * 0.2) + (audioQuality * 0.1);
+      } else {
+        finalConfidence = (textHeuristic * 0.6) + (audioQuality * 0.4);
+      }
+      finalConfidence = finalConfidence.clamp(0.0, 1.0);
 
       if (todoId != null) {
         await repository.completeRecognition(
           id: todoId,
-          text: text,
+          text: processed,
           modelVersion: 'vosk-model-small-cn-0.22',
+          confidence: finalConfidence,
         );
       }
     } catch (e) {

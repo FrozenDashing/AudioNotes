@@ -29,28 +29,33 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
 
   void _setupListeners() {
     final playbackService = ref.read(audioPlaybackServiceProvider);
-
-    playbackService.stateStream.listen((state) {
+    // Update only when the global player is playing this widget's audioPath
+    playbackService.currentAudioPathStream.listen((currentPath) {
       if (mounted) {
         setState(() {
-          isPlaying = state == PlayerState.playing;
+          isPlaying = currentPath == widget.audioPath &&
+              playbackService.getCurrentState() == PlayerState.playing;
         });
       }
     });
 
     playbackService.positionStream.listen((pos) {
       if (mounted) {
-        setState(() {
-          position = pos;
-        });
+        if (playbackService.currentAudioPath == widget.audioPath) {
+          setState(() {
+            position = pos;
+          });
+        }
       }
     });
 
     playbackService.durationStream.listen((dur) {
       if (mounted) {
-        setState(() {
-          duration = dur;
-        });
+        if (playbackService.currentAudioPath == widget.audioPath) {
+          setState(() {
+            duration = dur;
+          });
+        }
       }
     });
   }
@@ -73,23 +78,22 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(
-                top:
-                    8.0), // ✅ Move progress bar up to align with play button triangle
+            padding: const EdgeInsets.symmetric(vertical: 1.0),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                SizedBox(
+                  height: 6,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: duration.inMilliseconds > 0
+                          ? position.inMilliseconds / duration.inMilliseconds
+                          : 0,
+                    ),
                   ),
-                ),
-                LinearProgressIndicator(
-                  value: duration.inMilliseconds > 0
-                      ? position.inMilliseconds / duration.inMilliseconds
-                      : 0,
                 ),
               ],
             ),
@@ -97,13 +101,6 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         ),
       ],
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
   }
 
   @override

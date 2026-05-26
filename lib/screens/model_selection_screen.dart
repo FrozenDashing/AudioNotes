@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../models/model_metadata.dart';
 import '../repositories/model_repository.dart';
+import '../services/model_manager_service.dart';
+import '../providers/app_providers.dart';
 
 /// Screen for selecting and managing speech recognition models
 class ModelSelectionScreen extends ConsumerStatefulWidget {
@@ -74,27 +78,92 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
   }
 
   void _handleDownload(ModelMetadata model) {
-    // Simulate download process
-    showDialog(
+    final manager = ref.read(modelManagerServiceProvider);
+
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('下载模型'),
-        content: const Text('确认下载此语音识别模型？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              // In a real app, this would start the actual download
-              _simulateDownload(model);
+      barrierDismissible: false,
+      builder: (context) {
+        double progress = 0.0;
+        StreamSubscription<double>? sub;
+
+        void startDownload() async {
+          final voskModel = model.modelId.contains('small')
+              ? VoskModel.chineseSmall()
+              : VoskModel.chineseLarge();
+
+          final stream = manager.downloadModel(voskModel);
+          sub = stream.listen((p) async {
+            progress = p;
+            if (context.mounted) setState(() {});
+            if (p >= 1.0) {
+              // Finalize: mark model downloaded in repo
+              final repo = ModelRepository();
+              final path = await manager.getModelPath(voskModel.name);
+              final updated = model.copyWith(
+                isDownloaded: true,
+                downloadedAt: DateTime.now(),
+                path: path,
+              );
+              await repo.updateModel(updated);
+
+              // Reload recognition model
+              await ref.read(recognitionServiceProvider).reloadModel();
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                setState(() {
+                  _modelsFuture = _loadModels();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('模型下载完成')),
+                );
+              }
+            }
+          }, onError: (e) async {
+            sub?.cancel();
+            if (context.mounted) {
               Navigator.pop(context);
-            },
-            child: const Text('下载'),
-          ),
-        ],
-      ),
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('下载失败: $e')),
+              );
+            }
+          });
+        }
+
+        startDownload();
+
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: Text('下载模型：${model.name}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: LinearProgressIndicator(value: progress),
+                ),
+                const SizedBox(height: 8),
+                Text('${(progress * 100).toStringAsFixed(0)}%'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  // Cancel download
+                  await sub?.cancel();
+                  // Attempt to clean up partial files
+                  try {
+                    await manager.deleteModel(model.modelId);
+                  } catch (_) {}
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('取消'),
+              ),
+            ],
+          );
+        });
+      },
     );
   }
 
@@ -155,29 +224,8 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
     navigator.pop(model.modelId);
   }
 
-  Future<void> _simulateDownload(ModelMetadata model) async {
-    final repo = ModelRepository();
-
-    // Simulate download progress
-    final updatedModel = model.copyWith(
-      isDownloaded: true,
-      downloadedAt: DateTime.now(),
-      path: '/models/${model.modelId}',
-    );
-
-    await repo.updateModel(updatedModel);
-
-    if (!context.mounted) {
-      return;
-    }
-
-    // Refresh the list
-    setState(() {
-      _modelsFuture = _loadModels();
-    });
-
-    debugPrint('${model.name} 已下载完成');
-  }
+  // Removed unused simulate download helper; real downloads are handled
+  // by `_handleDownload` which uses `ModelManagerService`.
 }
 
 /// Widget for displaying a model card

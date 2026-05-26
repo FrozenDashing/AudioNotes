@@ -61,6 +61,75 @@ class RecognitionService {
     }
   }
 
+  /// Recognize a WAV file and return detailed result including text and
+  /// optional confidence score from the platform ASR.
+  /// Returns a map: { 'text': String, 'confidence': double? }
+  Future<Map<String, dynamic>?> recognizeDetailed(String wavPath) async {
+    List<String> chunks = [wavPath];
+
+    try {
+      chunks = await _chunker.splitIfNeeded(wavPath);
+
+      if (chunks.length == 1) {
+        final result = await _channel.invokeMethod('recognize', {
+          'wav_path': chunks.first,
+          'detailed': true,
+        });
+
+        if (result == null) return null;
+
+        if (result is Map) {
+          // Expect {'text': '...', 'confidence': 0.87}
+          return Map<String, dynamic>.from(result);
+        } else {
+          // Fallback: string
+          return {'text': result.toString(), 'confidence': null};
+        }
+      } else {
+        final texts = <String>[];
+        final confidences = <double>[];
+
+        for (final chunk in chunks) {
+          final result = await _channel.invokeMethod('recognize', {
+            'wav_path': chunk,
+            'detailed': true,
+          });
+
+          if (result == null) continue;
+          if (result is Map) {
+            final text = (result['text'] ?? '').toString();
+            texts.add(text);
+            final conf = result['confidence'];
+            if (conf is num) confidences.add(conf.toDouble());
+          } else {
+            final s = result.toString();
+            if (s.isNotEmpty) texts.add(s);
+          }
+        }
+
+        final merged = _chunker.mergeResults(texts);
+        double? avgConf;
+        if (confidences.isNotEmpty) {
+          avgConf = confidences.reduce((a, b) => a + b) / confidences.length;
+        }
+        return {'text': merged, 'confidence': avgConf};
+      }
+    } on PlatformException catch (e) {
+      print('Failed to recognize audio (detailed): ${e.message}');
+      rethrow;
+    } finally {
+      for (final chunk in chunks) {
+        if (chunk != wavPath) {
+          try {
+            await _deleteFile(chunk);
+          } catch (e) {
+            print('Error deleting chunk file: $e');
+          }
+        }
+      }
+    }
+  }
+
   /// Check if model is loaded and ready
   Future<bool> isModelReady() async {
     try {
