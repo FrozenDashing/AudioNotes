@@ -137,7 +137,7 @@ class TodoItemCard extends ConsumerWidget {
             else
               Text(
                 todo.text.isEmpty ? '识别中...' : todo.text,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   height: 1.2,
                   color: null,
@@ -250,48 +250,93 @@ class TodoItemCard extends ConsumerWidget {
       BuildContext context, WidgetRef ref, TodoListNotifier notifier) {
     final isCompleted = todo.status == TodoStatus.completed;
     final hasAudio = todo.audioPath != null && todo.audioPath!.isNotEmpty;
+    final rootContext = context;
 
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit'),
-              onTap: () {
-                Navigator.pop(context);
-                _showEditDialog(context, notifier);
-              },
-            ),
-            if (hasAudio)
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Playback'),
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit'),
                 onTap: () {
-                  Navigator.pop(context);
-                  _playback(context, ref);
+                  Navigator.pop(sheetContext);
+                  _showEditDialog(rootContext, notifier);
                 },
               ),
-            if (!isCompleted)
               ListTile(
-                leading: const Icon(Icons.mic),
-                title: const Text('Re-record'),
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: const Text('设置提醒时间'),
+                subtitle: todo.remindAt == null
+                    ? null
+                    : Text('当前: ${_formatDateTimeValue(todo.remindAt!)}'),
                 onTap: () {
-                  Navigator.pop(context);
-                  _reRecord(context, ref);
+                  Navigator.pop(sheetContext);
+                  _setReminderTime(rootContext, ref, notifier);
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDelete(context, notifier);
-              },
-            ),
-          ],
+              if (todo.remindAt != null)
+                ListTile(
+                  leading: const Icon(Icons.notifications_off_outlined),
+                  title: const Text('清除提醒'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _clearReminder(rootContext, ref, notifier);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: const Text('设置截止时间'),
+                subtitle: todo.dueAt == null
+                    ? null
+                    : Text('当前: ${_formatDateTimeValue(todo.dueAt!)}'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _setDueTime(rootContext, ref, notifier);
+                },
+              ),
+              if (todo.dueAt != null)
+                ListTile(
+                  leading: const Icon(Icons.event_busy_outlined),
+                  title: const Text('清除截止时间'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _clearDueTime(rootContext, ref, notifier);
+                  },
+                ),
+              if (hasAudio)
+                ListTile(
+                  leading: const Icon(Icons.play_arrow),
+                  title: const Text('Playback'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _playback(rootContext, ref);
+                  },
+                ),
+              if (!isCompleted)
+                ListTile(
+                  leading: const Icon(Icons.mic),
+                  title: const Text('Re-record'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _reRecord(rootContext, ref);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmDelete(rootContext, notifier);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -302,20 +347,168 @@ class TodoItemCard extends ConsumerWidget {
 
     recordingNotifier.startReRecord(todo).catchError((error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('重录失败: $error')),
-        );
+        _showToast(context, '重录失败: $error');
       }
     });
+  }
+
+  Future<void> _setReminderTime(
+    BuildContext context,
+    WidgetRef ref,
+    TodoListNotifier notifier,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final pickerResult = await _pickDateTime(context, initial: todo.remindAt);
+    if (pickerResult == null) return;
+
+    final updated = await notifier.updateReminderTime(todo.id, pickerResult);
+    if (updated?.remindAt == null) {
+      if (context.mounted) {
+        _showToast(context, '提醒时间写入失败，请重试');
+      }
+      return;
+    }
+    await _ensureExactAlarmPermission(context, ref);
+    await ref.read(reminderServiceProvider).scheduleReminderForTodo(updated!);
+    await notifier.loadTodos();
+
+    if (!context.mounted) return;
+
+    _showToast(context, '提醒已设置为 ${_formatDateTimeValue(pickerResult)}');
+  }
+
+  Future<void> _clearReminder(
+    BuildContext context,
+    WidgetRef ref,
+    TodoListNotifier notifier,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updated = await notifier.updateReminderTime(todo.id, null);
+    if (updated == null) {
+      if (context.mounted) {
+        _showToast(context, '提醒清除失败，请重试');
+      }
+      return;
+    }
+    await ref.read(reminderServiceProvider).clearReminder(todo.id);
+    if (!context.mounted) return;
+    _showToast(context, '提醒已清除');
+  }
+
+  Future<void> _setDueTime(
+    BuildContext context,
+    WidgetRef ref,
+    TodoListNotifier notifier,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final pickerResult = await _pickDateTime(context, initial: todo.dueAt);
+    if (pickerResult == null) return;
+
+    final updated = await notifier.updateDueTime(todo.id, pickerResult);
+    if (updated?.dueAt == null) {
+      if (context.mounted) {
+        _showToast(context, '截止时间写入失败，请重试');
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    _showToast(context, '截止时间已设置为 ${_formatDateTimeValue(pickerResult)}');
+  }
+
+  Future<void> _clearDueTime(
+    BuildContext context,
+    WidgetRef ref,
+    TodoListNotifier notifier,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updated = await notifier.updateDueTime(todo.id, null);
+    if (updated == null) {
+      if (context.mounted) {
+        _showToast(context, '截止时间清除失败，请重试');
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    _showToast(context, '截止时间已清除');
+  }
+
+  Future<void> _ensureExactAlarmPermission(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final notificationService = ref.read(notificationServiceProvider);
+    final allowed = await notificationService.canScheduleExactAlarms();
+    if (allowed || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final shouldRequest = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('允许精确提醒?'),
+        content: const Text('系统限制精确闹钟，开启后提醒会更准。是否前往开启？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('稍后'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('去开启'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRequest != true || !context.mounted) return;
+
+    final granted = await notificationService.requestExactAlarmsPermission();
+    if (!context.mounted) return;
+    if (!granted) {
+      _showToast(context, '未开启精确提醒，将使用普通提醒');
+    }
+  }
+
+  Future<DateTime?> _pickDateTime(
+    BuildContext context, {
+    DateTime? initial,
+  }) async {
+    final now = DateTime.now();
+    final initialDate = initial ?? now;
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (date == null) return null;
+
+    if (!context.mounted) return null;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDate),
+    );
+    if (time == null) return null;
+
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  String _formatDateTimeValue(DateTime dateTime) {
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '${dateTime.year}-$month-$day $hour:$minute';
   }
 
   Future<void> _playback(BuildContext context, WidgetRef ref) async {
     final audioPath = todo.audioPath;
     if (audioPath == null || audioPath.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('没有可播放的音频')),
-        );
+        _showToast(context, '没有可播放的音频');
       }
       return;
     }
@@ -324,11 +517,46 @@ class TodoItemCard extends ConsumerWidget {
       await ref.read(audioPlaybackServiceProvider).play(audioPath);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('播放失败: $e')),
-        );
+        _showToast(context, '播放失败: $e');
       }
     }
+  }
+
+  void _showToast(BuildContext context, String message) {
+    final overlay = Overlay.of(context);
+    if (overlay == null) return;
+
+    final entry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: 16,
+        right: 16,
+        bottom: 24,
+        child: SafeArea(
+          child: ExcludeSemantics(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 2), entry.remove);
   }
 
   void _confirmDelete(BuildContext context, TodoListNotifier notifier) {

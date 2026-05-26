@@ -8,7 +8,10 @@ import '../services/recorder_service.dart';
 import '../services/recognition_service.dart';
 import '../services/audio_playback_service.dart';
 import '../services/model_manager_service.dart';
+import '../services/notification_service.dart';
+import '../services/reminder_service.dart';
 import '../data/todo_repository.dart';
+import '../data/reminder_repository.dart';
 import '../domain/usecases/create_todo_from_recording_usecase.dart';
 
 /// Provider for database helper
@@ -19,6 +22,25 @@ final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
 /// Provider for todo repository
 final todoRepositoryProvider = Provider<TodoRepository>((ref) {
   return TodoRepository();
+});
+
+/// Provider for reminder repository
+final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
+  return ReminderRepository();
+});
+
+/// Provider for notification service
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService.instance;
+});
+
+/// Provider for reminder service
+final reminderServiceProvider = Provider<ReminderService>((ref) {
+  return ReminderService(
+    reminderRepository: ref.read(reminderRepositoryProvider),
+    todoRepository: ref.read(todoRepositoryProvider),
+    notificationService: ref.read(notificationServiceProvider),
+  );
 });
 
 /// Provider for recorder service
@@ -488,6 +510,60 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       await dbHelper.updateTodo(updated);
       await loadTodos();
     }
+  }
+
+  /// Update reminder time and refresh list state
+  Future<TodoItem?> updateReminderTime(String id, DateTime? remindAt) async {
+    final result = await _repository.updateRemindAt(id, remindAt);
+    if (result == null) {
+      await loadTodos();
+      return null;
+    }
+
+    final refreshed = await _repository.getTodoById(id);
+    if (refreshed == null) {
+      await loadTodos();
+      return result;
+    }
+
+    final currentValue = state.value;
+    if (currentValue == null) {
+      await loadTodos();
+      return refreshed;
+    }
+
+    final updatedTodos = currentValue
+        .map((todo) => todo.id == id ? refreshed : todo)
+        .toList(growable: false);
+    state = AsyncValue.data(updatedTodos);
+    return refreshed;
+  }
+
+  /// Update due time and refresh list state
+  Future<TodoItem?> updateDueTime(String id, DateTime? dueAt) async {
+    final result = await _repository.updateDueAt(id, dueAt);
+    if (result == null) {
+      await loadTodos();
+      return null;
+    }
+
+    final refreshed = await _repository.getTodoById(id);
+    if (refreshed == null) {
+      await loadTodos();
+      return result;
+    }
+
+    final currentValue = state.value;
+    if (currentValue == null) {
+      await loadTodos();
+      return refreshed;
+    }
+
+    final updatedTodos = currentValue
+        .map((todo) => todo.id == id ? refreshed : todo)
+        .toList(growable: false);
+    state = AsyncValue.data(updatedTodos);
+    return refreshed;
   }
 
   /// Delete a todo

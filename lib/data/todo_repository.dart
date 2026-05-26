@@ -17,6 +17,7 @@ class TodoRepository {
     final todo = TodoItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
+      rawTranscript: text,
       createdAt: DateTime.now(),
       audioPath: audioPath,
       taskState: TodoTaskState.recognizing,
@@ -63,6 +64,7 @@ class TodoRepository {
     if (todo != null) {
       final updated = todo.copyWith(
         text: text,
+        rawTranscript: text,
         taskState: TodoTaskState.ready,
         durationMs: durationMs,
         modelVersion: modelVersion,
@@ -94,6 +96,43 @@ class TodoRepository {
     await _dbHelper.toggleStatus(id);
   }
 
+  /// Update the due time of a todo item
+  Future<TodoItem?> updateDueAt(String id, DateTime? dueAt) async {
+    final rows = await _dbHelper.updateDueAt(id, dueAt);
+    if (rows == 0) return null;
+    return _dbHelper.getTodoById(id);
+  }
+
+  /// Update the reminder time of a todo item
+  Future<TodoItem?> updateRemindAt(String id, DateTime? remindAt) async {
+    final rows = await _dbHelper.updateRemindAt(id, remindAt);
+    if (rows == 0) return null;
+    return _dbHelper.getTodoById(id);
+  }
+
+  /// Update the repeat configuration of a todo item
+  Future<void> updateRepeatRule(
+    String id,
+    TodoRepeatType repeatType, {
+    String? repeatRule,
+  }) async {
+    await _dbHelper.updateRepeatRule(
+      id,
+      repeatType,
+      repeatRule: repeatRule,
+    );
+  }
+
+  /// Update the category of a todo item
+  Future<void> updateCategory(String id, String? categoryId) async {
+    await _dbHelper.updateCategory(id, categoryId);
+  }
+
+  /// Update the pinned state of a todo item
+  Future<void> updatePinned(String id, bool pinned) async {
+    await _dbHelper.updatePinned(id, pinned);
+  }
+
   /// Set todo completion status explicitly
   Future<TodoItem?> setStatus(String id, TodoStatus status) async {
     return _dbHelper.setStatus(id, status);
@@ -116,6 +155,8 @@ class TodoRepository {
       }
     }
 
+    await _dbHelper.deleteReminderByTodoId(id);
+
     // Delete from database
     await _dbHelper.deleteTodo(id);
   }
@@ -128,6 +169,11 @@ class TodoRepository {
   /// Get todos by task state
   Future<List<TodoItem>> getTodosByTaskState(TodoTaskState state) async {
     return await _dbHelper.getTodosByTaskState(state);
+  }
+
+  /// Get a single todo by ID
+  Future<TodoItem?> getTodoById(String id) async {
+    return _dbHelper.getTodoById(id);
   }
 
   /// Clean up orphaned audio files

@@ -2,14 +2,14 @@ import 'package:intl/intl.dart';
 
 /// Task lifecycle state (separate from completion status)
 enum TodoTaskState {
-  recording(0),    // Currently recording
-  recognizing(1),  // Audio recorded, being recognized
-  ready(2),        // Recognition completed, ready to use
-  failed(3);       // Recognition failed
+  recording(0), // Currently recording
+  recognizing(1), // Audio recorded, being recognized
+  ready(2), // Recognition completed, ready to use
+  failed(3); // Recognition failed
 
   final int value;
   const TodoTaskState(this.value);
-  
+
   static TodoTaskState fromValue(int value) {
     return TodoTaskState.values.firstWhere(
       (state) => state.value == value,
@@ -25,11 +25,28 @@ enum TodoStatus {
 
   final int value;
   const TodoStatus(this.value);
-  
+
   static TodoStatus fromValue(int value) {
     return TodoStatus.values.firstWhere(
       (status) => status.value == value,
       orElse: () => TodoStatus.pending,
+    );
+  }
+}
+
+/// Repeat frequency for scheduled todos
+enum TodoRepeatType {
+  none(0),
+  daily(1),
+  weekly(2);
+
+  final int value;
+  const TodoRepeatType(this.value);
+
+  static TodoRepeatType fromValue(int value) {
+    return TodoRepeatType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => TodoRepeatType.none,
     );
   }
 }
@@ -42,7 +59,7 @@ enum ConfidenceLevel {
 
   final int value;
   const ConfidenceLevel(this.value);
-  
+
   static ConfidenceLevel fromValue(double? confidence) {
     if (confidence == null) return ConfidenceLevel.medium;
     if (confidence < 0.5) return ConfidenceLevel.low;
@@ -55,14 +72,23 @@ enum ConfidenceLevel {
 class TodoItem {
   final String id;
   final String text;
+  final String? rawTranscript;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? audioPath;
-  final TodoTaskState taskState;  // Task lifecycle state
-  final TodoStatus status;        // Completion status
-  final int? durationMs;          // Audio duration in milliseconds
-  final String? errorMessage;     // Error message if recognition failed
-  final String? modelVersion;     // Vosk model version used
+  final TodoTaskState taskState; // Task lifecycle state
+  final TodoStatus status; // Completion status
+  final DateTime? dueAt;
+  final DateTime? remindAt;
+  final TodoRepeatType repeatType;
+  final String? repeatRule;
+  final String? categoryId;
+  final bool pinned;
+  final DateTime? completedAt;
+  final DateTime? deletedAt;
+  final int? durationMs; // Audio duration in milliseconds
+  final String? errorMessage; // Error message if recognition failed
+  final String? modelVersion; // Vosk model version used
   final int? orderIndex;
   final double? confidence;
   final String? meta;
@@ -70,11 +96,20 @@ class TodoItem {
   const TodoItem({
     required this.id,
     required this.text,
+    this.rawTranscript,
     required this.createdAt,
     this.updatedAt,
     this.audioPath,
     this.taskState = TodoTaskState.ready,
     this.status = TodoStatus.pending,
+    this.dueAt,
+    this.remindAt,
+    this.repeatType = TodoRepeatType.none,
+    this.repeatRule,
+    this.categoryId,
+    this.pinned = false,
+    this.completedAt,
+    this.deletedAt,
     this.durationMs,
     this.errorMessage,
     this.modelVersion,
@@ -88,13 +123,30 @@ class TodoItem {
     return TodoItem(
       id: json['id'] as String,
       text: json['text'] as String,
+      rawTranscript: json['raw_text'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
-      updatedAt: json['updated_at'] != null 
+      updatedAt: json['updated_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['updated_at'] as int)
           : null,
       audioPath: json['audio_path'] as String?,
       taskState: TodoTaskState.fromValue(json['task_state'] as int? ?? 2),
       status: TodoStatus.fromValue(json['status'] as int? ?? 0),
+      dueAt: json['due_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['due_at'] as int)
+          : null,
+      remindAt: json['remind_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['remind_at'] as int)
+          : null,
+      repeatType: TodoRepeatType.fromValue(json['repeat_type'] as int? ?? 0),
+      repeatRule: json['repeat_rule'] as String?,
+      categoryId: json['category_id'] as String?,
+      pinned: (json['pinned'] as int? ?? 0) == 1,
+      completedAt: json['completed_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['completed_at'] as int)
+          : null,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['deleted_at'] as int)
+          : null,
       durationMs: json['duration_ms'] as int?,
       errorMessage: json['error_message'] as String?,
       modelVersion: json['model_version'] as String?,
@@ -103,17 +155,26 @@ class TodoItem {
       meta: json['meta'] as String?,
     );
   }
-  
+
   /// Convert TodoItem to database map
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'text': text,
+      'raw_text': rawTranscript,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt?.millisecondsSinceEpoch,
       'audio_path': audioPath,
       'task_state': taskState.value,
       'status': status.value,
+      'due_at': dueAt?.millisecondsSinceEpoch,
+      'remind_at': remindAt?.millisecondsSinceEpoch,
+      'repeat_type': repeatType.value,
+      'repeat_rule': repeatRule,
+      'category_id': categoryId,
+      'pinned': pinned ? 1 : 0,
+      'completed_at': completedAt?.millisecondsSinceEpoch,
+      'deleted_at': deletedAt?.millisecondsSinceEpoch,
       'duration_ms': durationMs,
       'error_message': errorMessage,
       'model_version': modelVersion,
@@ -127,11 +188,20 @@ class TodoItem {
   TodoItem copyWith({
     String? id,
     String? text,
+    String? rawTranscript,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? audioPath,
     TodoTaskState? taskState,
     TodoStatus? status,
+    DateTime? dueAt,
+    DateTime? remindAt,
+    TodoRepeatType? repeatType,
+    String? repeatRule,
+    String? categoryId,
+    bool? pinned,
+    DateTime? completedAt,
+    DateTime? deletedAt,
     int? durationMs,
     String? errorMessage,
     String? modelVersion,
@@ -142,11 +212,20 @@ class TodoItem {
     return TodoItem(
       id: id ?? this.id,
       text: text ?? this.text,
+      rawTranscript: rawTranscript ?? this.rawTranscript,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       audioPath: audioPath ?? this.audioPath,
       taskState: taskState ?? this.taskState,
       status: status ?? this.status,
+      dueAt: dueAt ?? this.dueAt,
+      remindAt: remindAt ?? this.remindAt,
+      repeatType: repeatType ?? this.repeatType,
+      repeatRule: repeatRule ?? this.repeatRule,
+      categoryId: categoryId ?? this.categoryId,
+      pinned: pinned ?? this.pinned,
+      completedAt: completedAt ?? this.completedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       durationMs: durationMs ?? this.durationMs,
       errorMessage: errorMessage ?? this.errorMessage,
       modelVersion: modelVersion ?? this.modelVersion,
@@ -168,12 +247,12 @@ class TodoItem {
   String toString() {
     return 'TodoItem{id: $id, text: $text, status: $status, createdAt: $createdAt}';
   }
-  
+
   /// Format the creation date for display
   String get formattedDate {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
-    
+
     if (difference.inDays == 0) {
       return 'Today at ${DateFormat('HH:mm').format(createdAt)}';
     } else if (difference.inDays == 1) {
