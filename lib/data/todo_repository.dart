@@ -36,11 +36,15 @@ class TodoRepository {
   }
 
   /// Update todo to recognizing state
-  Future<void> updateToRecognizing(String id) async {
+  Future<void> updateToRecognizing(
+    String id, {
+    String? audioPath,
+  }) async {
     final todo = await _dbHelper.getTodoById(id);
     if (todo != null) {
       final updated = todo.copyWith(
         taskState: TodoTaskState.recognizing,
+        audioPath: audioPath ?? todo.audioPath,
         updatedAt: DateTime.now(),
       );
       await _dbHelper.updateTodo(updated);

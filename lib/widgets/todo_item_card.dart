@@ -30,7 +30,7 @@ class TodoItemCard extends ConsumerWidget {
     if (isRecognizing) {
       return Card(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        color: theme.colorScheme.surfaceVariant.withValues(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
           alpha: theme.brightness == Brightness.dark ? 0.5 : 0.8,
         ),
         child: Padding(
@@ -86,7 +86,7 @@ class TodoItemCard extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       color: isCompleted
-          ? theme.colorScheme.surfaceVariant.withValues(
+          ? theme.colorScheme.surfaceContainerHighest.withValues(
               alpha: theme.brightness == Brightness.dark ? 0.55 : 0.7,
             )
           : null,
@@ -294,7 +294,7 @@ class TodoItemCard extends ConsumerWidget {
                 if (isCompleted) {
                   _playback(context, ref);
                 } else {
-                  _reRecord(context);
+                  _reRecord(context, ref);
                 }
               },
             ),
@@ -312,11 +312,16 @@ class TodoItemCard extends ConsumerWidget {
     );
   }
 
-  void _reRecord(BuildContext context) {
-    // TODO: Implement re-recording functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Re-record feature coming soon')),
-    );
+  void _reRecord(BuildContext context, WidgetRef ref) {
+    final recordingNotifier = ref.read(recordingStateProvider.notifier);
+
+    recordingNotifier.startReRecord(todo).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('重录失败: $error')),
+        );
+      }
+    });
   }
 
   Future<void> _playback(BuildContext context, WidgetRef ref) async {

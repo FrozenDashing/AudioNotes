@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database_helper.dart';
@@ -62,6 +63,9 @@ enum RecordingState {
 }
 
 class RecordingNotifier extends Notifier<RecordingState> {
+  String? _replacementTodoId;
+  String? _replacementOldAudioPath;
+
   @override
   RecordingState build() => RecordingState.idle;
 
@@ -94,7 +98,29 @@ class RecordingNotifier extends Notifier<RecordingState> {
         throw Exception('录音文件生成失败');
       }
 
-      final todo = await repository.insertRecognizing(audioPath: wavPath);
+      final replacingTodoId = _replacementTodoId;
+      final replacingOldAudioPath = _replacementOldAudioPath;
+      _replacementTodoId = null;
+      _replacementOldAudioPath = null;
+
+      if (replacingTodoId != null) {
+        await repository.updateToRecognizing(
+          replacingTodoId,
+          audioPath: wavPath,
+        );
+      } else {
+        await repository.insertRecognizing(audioPath: wavPath);
+      }
+
+      if (replacingOldAudioPath != null &&
+          replacingOldAudioPath.isNotEmpty &&
+          replacingOldAudioPath != wavPath) {
+        try {
+          await File(replacingOldAudioPath).delete();
+        } catch (_) {
+          // Ignore cleanup failures; the file is now orphaned and can be cleaned later.
+        }
+      }
 
       // Return to idle immediately so the next recording can start right away.
       state = RecordingState.idle;
@@ -102,7 +128,12 @@ class RecordingNotifier extends Notifier<RecordingState> {
       // Show the placeholder item immediately.
       await ref.read(todoListProvider.notifier).loadTodos();
 
-      unawaited(_recognizeRecordingInBackground(todo.id, wavPath));
+      unawaited(
+        _recognizeRecordingInBackground(
+          replacingTodoId,
+          wavPath,
+        ),
+      );
     } catch (e) {
       print('Recording workflow failed: $e');
       state = RecordingState.failed;
@@ -115,7 +146,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
   }
 
   Future<void> _recognizeRecordingInBackground(
-    String todoId,
+    String? todoId,
     String wavPath,
   ) async {
     final recognition = ref.read(recognitionServiceProvider);
@@ -130,19 +161,33 @@ class RecordingNotifier extends Notifier<RecordingState> {
 
       text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
-      await repository.completeRecognition(
-        id: todoId,
-        text: text,
-        modelVersion: 'vosk-model-small-cn-0.22',
-      );
+      if (todoId != null) {
+        await repository.completeRecognition(
+          id: todoId,
+          text: text,
+          modelVersion: 'vosk-model-small-cn-0.22',
+        );
+      }
     } catch (e) {
-      await repository.markFailed(
-        id: todoId,
-        errorMessage: e.toString(),
-      );
+      if (todoId != null) {
+        await repository.markFailed(
+          id: todoId,
+          errorMessage: e.toString(),
+        );
+      }
     } finally {
       await ref.read(todoListProvider.notifier).loadTodos();
     }
+  }
+
+  Future<void> startReRecord(TodoItem todo) async {
+    if (state != RecordingState.idle) {
+      return;
+    }
+
+    _replacementTodoId = todo.id;
+    _replacementOldAudioPath = todo.audioPath;
+    await start();
   }
 
   void reset() => state = RecordingState.idle;
