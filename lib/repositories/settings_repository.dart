@@ -1,0 +1,63 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart'; // For Color
+import '../models/settings_state.dart';
+
+/// Repository for managing settings persistence
+class SettingsRepository {
+  static const String _currentModelIdKey = 'current_model_id';
+  static const String _autoModelSelectKey = 'auto_model_select';
+  static const String _themeModeKey = 'theme_mode';
+  static const String _customThemeColorKey = 'custom_theme_color';
+  static const String _fontSizeOptionKey = 'font_size_option';
+  static const String _customFontScaleKey = 'custom_font_scale';
+  static const String _followSystemFontSizeKey = 'follow_system_font_size';
+
+  /// Load settings from shared preferences
+  Future<SettingsState> loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Get string values from preferences
+    String themeModeStr = prefs.getString(_themeModeKey) ?? 'system';
+    String fontSizeOptionStr = prefs.getString(_fontSizeOptionKey) ?? 'medium';
+
+    return SettingsState(
+      currentModelId: prefs.getString(_currentModelIdKey) ?? 'auto',
+      autoModelSelect: prefs.getBool(_autoModelSelectKey) ?? true,
+      themeMode: ThemeModeOption.values.firstWhere(
+        (e) => e.toString().split('.')[1] == themeModeStr,
+        orElse: () => ThemeModeOption.system,
+      ),
+      customThemeColor: prefs.getInt(_customThemeColorKey) != null
+          ? Color(prefs.getInt(_customThemeColorKey)!)
+          : null,
+      fontSizeOption: FontSizeOption.values.firstWhere(
+        (e) => e.toString().split('.')[1] == fontSizeOptionStr,
+        orElse: () => FontSizeOption.medium,
+      ),
+      customFontScale: prefs.getDouble(_customFontScaleKey) ?? 1.0,
+      followSystemFontSize: prefs.getBool(_followSystemFontSizeKey) ?? false,
+    );
+  }
+
+  /// Save settings to shared preferences
+  Future<bool> saveSettings(SettingsState settings) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    bool result = await prefs.setString(
+            _currentModelIdKey, settings.currentModelId) &&
+        await prefs.setBool(_autoModelSelectKey, settings.autoModelSelect) &&
+        await prefs.setString(
+            _themeModeKey, settings.themeMode.toString().split('.')[1]) &&
+        (settings.customThemeColor != null
+            ? await prefs.setInt(
+                _customThemeColorKey, settings.customThemeColor!.toARGB32())
+            : await prefs.remove(_customThemeColorKey)) &&
+        await prefs.setString(_fontSizeOptionKey,
+            settings.fontSizeOption.toString().split('.')[1]) &&
+        await prefs.setDouble(_customFontScaleKey, settings.customFontScale) &&
+        await prefs.setBool(
+            _followSystemFontSizeKey, settings.followSystemFontSize);
+
+    return result;
+  }
+}

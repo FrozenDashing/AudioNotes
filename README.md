@@ -292,9 +292,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues, questions, or contributions:
 - Open an issue on GitHub
-- Email: support@audionotes.com
-- Documentation: [Wiki](link-to-wiki)
-
+- Email: 251250073@smail.nju.edu.cn
 ---
 
 **Built with ❤️ for productivity enthusiasts**

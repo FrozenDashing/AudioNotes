@@ -33,8 +33,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify that the app title is displayed.
-    expect(find.text('AudioNotes'), findsOneWidget);
+    // Verify that the old app title is no longer displayed.
+    expect(find.text('AudioNotes'), findsNothing);
+
+    // Verify that the settings action is still available.
+    expect(find.byIcon(Icons.settings), findsOneWidget);
 
     // Verify that the recording button (FAB) is present.
     expect(find.byType(FloatingActionButton), findsOneWidget);

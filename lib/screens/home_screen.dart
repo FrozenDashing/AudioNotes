@@ -4,6 +4,7 @@ import '../providers/app_providers.dart';
 import '../widgets/recording_overlay.dart';
 import '../widgets/todo_item_card.dart';
 import '../widgets/floating_action_toolbar.dart';
+import 'settings_screen.dart';
 import '../services/model_manager_service.dart';
 import '../services/recognition_service.dart';
 import '../models/todo_item.dart';
@@ -68,14 +69,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final todoState = ref.watch(todoListProvider);
+    final todoNotifier = ref.read(todoListProvider.notifier);
+    final todos = todoState.maybeWhen(
+      data: (todos) => todos,
+      orElse: () => const <TodoItem>[],
+    );
+    final selectedCount = todoNotifier.selectedIds.length;
+    final hasSelectedTodos = selectedCount > 0;
+    final allTodosSelected = hasSelectedTodos && selectedCount == todos.length;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AudioNotes'),
+        leadingWidth: hasSelectedTodos ? 72 : null,
+        leading: hasSelectedTodos
+            ? Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Material(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      if (allTodosSelected) {
+                        todoNotifier.clearSelection();
+                      } else {
+                        todoNotifier.selectAllTodos();
+                      }
+                    },
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(
+                        allTodosSelected
+                            ? Icons.check_box
+                            : Icons.indeterminate_check_box,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // TODO: Navigate to settings
+              // Navigate to settings screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
           ),
         ],
@@ -159,7 +208,7 @@ class _TodoListContent extends ConsumerWidget {
     return todosAsync.when(
       data: (todos) {
         if (todos.isEmpty) {
-          return _buildEmptyState();
+          return _buildEmptyState(context);
         }
 
         // Separate pending and completed todos
@@ -181,8 +230,8 @@ class _TodoListContent extends ConsumerWidget {
                       return _SectionHeader(
                         title: entry.title,
                         color: entry.section == TodoStatus.pending
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey[600]!,
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       );
                     }
 
@@ -206,17 +255,17 @@ class _TodoListContent extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: 16),
             Text(
               '加载失败',
               style: TextStyle(
                 fontSize: 20,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -224,7 +273,7 @@ class _TodoListContent extends ConsumerWidget {
               error.toString(),
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[500],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -233,7 +282,7 @@ class _TodoListContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -241,14 +290,14 @@ class _TodoListContent extends ConsumerWidget {
           Icon(
             Icons.mic_none,
             size: 80,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 16),
           Text(
             '暂无笔记',
             style: TextStyle(
               fontSize: 20,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -256,7 +305,7 @@ class _TodoListContent extends ConsumerWidget {
             '点击麦克风开始录音',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],

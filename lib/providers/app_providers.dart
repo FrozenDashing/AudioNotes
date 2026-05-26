@@ -183,6 +183,13 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     state = AsyncValue.data(List<TodoItem>.from(todos));
   }
 
+  /// Select all todos.
+  void selectAllTodos() {
+    final todos = state.value ?? [];
+    _selectedIds = todos.map((todo) => todo.id).toSet();
+    state = AsyncValue.data(List<TodoItem>.from(todos));
+  }
+
   /// Check if a todo is selected
   bool isSelected(String id) {
     return _selectedIds.contains(id);

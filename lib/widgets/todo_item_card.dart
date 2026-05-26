@@ -38,7 +38,7 @@ class TodoItemCard extends ConsumerWidget {
                   key: ValueKey(isSelected),
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[500],
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 24,
                 ),
               ),
@@ -55,7 +55,9 @@ class TodoItemCard extends ConsumerWidget {
                 decoration: todo.status == TodoStatus.completed
                     ? TextDecoration.lineThrough
                     : null,
-                color: todo.status == TodoStatus.completed ? Colors.grey : null,
+                color: todo.status == TodoStatus.completed
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : null,
               ),
             ),
             if (todo.taskState == TodoTaskState.recognizing)
@@ -93,7 +95,7 @@ class TodoItemCard extends ConsumerWidget {
               _formatDateTime(todo.createdAt),
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             if (confidenceLevel == ConfidenceLevel.low &&

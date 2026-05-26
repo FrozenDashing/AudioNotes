@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
-import 'data/todo_repository.dart';
+import 'services/settings_service.dart';
+import 'providers/settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Perform cleanup tasks in background
-  _performStartupCleanup();
-  
+
+  // Initialize shared preferences
+  await SharedPreferences.getInstance();
+
   runApp(
     const ProviderScope(
       child: AudioNotesApp(),
@@ -16,57 +18,32 @@ void main() async {
   );
 }
 
-/// Perform startup cleanup tasks (non-blocking)
-Future<void> _performStartupCleanup() async {
-  try {
-    final repository = TodoRepository();
-    
-    // Clean up orphaned audio files (runs in background)
-    await repository.cleanupOrphanedFiles();
-    
-    // Log storage usage
-    final size = await repository.getTotalAudioStorageSize();
-    print('Total audio storage used: ${(size / 1024 / 1024).toStringAsFixed(2)} MB');
-  } catch (e) {
-    print('Startup cleanup error: $e');
-  }
-}
-
-class AudioNotesApp extends StatelessWidget {
+class AudioNotesApp extends ConsumerWidget {
   const AudioNotesApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final settingsService = SettingsService();
+    final systemScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final effectiveTextScale = settingsService.getEffectiveTextScaleFactor(
+      settings,
+      systemScale: systemScale,
+    );
+
     return MaterialApp(
       title: 'AudioNotes',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2196F3),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          elevation: 4,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2196F3),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: settingsService.getThemeData(settings),
+      darkTheme: settingsService.getDarkThemeData(settings),
+      themeMode: settingsService.getThemeMode(settings),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: TextScaler.linear(effectiveTextScale)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const HomeScreen(),
     );
   }

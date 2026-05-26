@@ -1,7 +1,7 @@
 name: audio_notes
 description: Offline speech-to-text todo application using Vosk ASR
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -37,6 +37,12 @@ dependencies:
   
   # Archive extraction for ZIP files
   archive: ^3.4.9
+  
+  # Shared preferences for settings
+  shared_preferences: ^2.2.2
+  
+  # Equatable for model comparison
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:
@@ -48,4 +54,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  

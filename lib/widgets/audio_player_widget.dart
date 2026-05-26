@@ -6,7 +6,7 @@ import '../providers/app_providers.dart';
 /// Widget for playing back audio recordings
 class AudioPlayerWidget extends ConsumerStatefulWidget {
   final String audioPath;
-  
+
   const AudioPlayerWidget({
     super.key,
     required this.audioPath,
@@ -29,7 +29,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
 
   void _setupListeners() {
     final playbackService = ref.read(audioPlaybackServiceProvider);
-    
+
     playbackService.stateStream.listen((state) {
       if (mounted) {
         setState(() {
@@ -37,7 +37,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         });
       }
     });
-    
+
     playbackService.positionStream.listen((pos) {
       if (mounted) {
         setState(() {
@@ -45,7 +45,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         });
       }
     });
-    
+
     playbackService.durationStream.listen((dur) {
       if (mounted) {
         setState(() {
@@ -63,7 +63,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
           icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
           onPressed: () async {
             final playbackService = ref.read(audioPlaybackServiceProvider);
-            
+
             if (isPlaying) {
               await playbackService.stop();
             } else {
@@ -73,17 +73,22 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 8.0), // ✅ Move progress bar up to align with play button triangle
+            padding: const EdgeInsets.only(
+                top:
+                    8.0), // ✅ Move progress bar up to align with play button triangle
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 LinearProgressIndicator(
-                  value: duration.inMilliseconds > 0 
-                      ? position.inMilliseconds / duration.inMilliseconds 
+                  value: duration.inMilliseconds > 0
+                      ? position.inMilliseconds / duration.inMilliseconds
                       : 0,
                 ),
               ],
