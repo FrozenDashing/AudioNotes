@@ -1,0 +1,75 @@
+# Miscellaneous
+*.log
+.DS_Store
+Thumbs.db
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.pub-cache/
+.pub/
+
+# Android
+android/.gradle/
+android/.idea/
+android/app/key.properties
+android/local.properties
+android/**/*.apk
+android/**/*.aab
+
+# iOS
+ios/.symlinks/
+ios/Pods/
+ios/Runner.xcworkspace/xcshareddata/
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+*.mobileprovision
+*.xcuserstate
+
+# Visual Studio Code
+.vscode/
+
+# IntelliJ
+.idea/
+*.iml
+
+# macOS
+*.swp
+*.swo
+*~
+
+# Windows
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Coverage
+coverage/
+
+# Generated files (keep .g.dart in version control if needed)
+# *.g.dart
+# *.freezed.dart
+
+# Vosk models (too large for git)
+assets/models/*.zip
+assets/models/vosk-model-*/
+
+# Audio recordings (user data)
+**/audio/
+*.pcm
+*.wav
+
+# Temporary files
+tmp/
+temp/
+*.tmp
