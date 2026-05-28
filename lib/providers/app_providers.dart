@@ -10,9 +10,18 @@ import '../services/audio_playback_service.dart';
 import '../services/model_manager_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
+import '../services/todo_grouping_service.dart';
 import '../data/todo_repository.dart';
 import '../data/reminder_repository.dart';
+import '../data/category_repository.dart';
+import '../data/tag_repository.dart';
+import '../models/todo_group.dart';
 import '../domain/usecases/create_todo_from_recording_usecase.dart';
+import '../models/category.dart';
+import '../models/tag.dart';
+import '../providers/settings_provider.dart';
+import '../models/todo_query_options.dart';
+import '../models/todo_priority.dart';
 
 /// Provider for database helper
 final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
@@ -27,6 +36,32 @@ final todoRepositoryProvider = Provider<TodoRepository>((ref) {
 /// Provider for reminder repository
 final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   return ReminderRepository();
+});
+
+/// Provider for category repository
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  return CategoryRepository();
+});
+
+/// Provider for tag repository
+final tagRepositoryProvider = Provider<TagRepository>((ref) {
+  return TagRepository();
+});
+
+/// Provider for todo grouping service
+final todoGroupingServiceProvider = Provider<TodoGroupingService>((ref) {
+  return TodoGroupingService();
+});
+
+/// Provider for tag list
+final tagListProvider = FutureProvider<List<Tag>>((ref) {
+  return ref.read(tagRepositoryProvider).getTags();
+});
+
+/// Provider for tags of a specific todo
+final tagsForTodoProvider =
+    FutureProvider.family<List<Tag>, String>((ref, todoId) {
+  return ref.read(tagRepositoryProvider).getTagsForTodo(todoId);
 });
 
 /// Provider for notification service
@@ -72,6 +107,7 @@ final createTodoUseCaseProvider =
     recorder: ref.read(recorderServiceProvider),
     recognition: ref.read(recognitionServiceProvider),
     repository: ref.read(todoRepositoryProvider),
+    settingsRepository: ref.read(settingsRepositoryProvider),
   );
 });
 
@@ -134,7 +170,11 @@ class RecordingNotifier extends Notifier<RecordingState> {
         );
         todoId = replacingTodoId;
       } else {
-        final todo = await repository.insertRecognizing(audioPath: wavPath);
+        final settings = ref.read(settingsProvider);
+        final todo = await repository.insertRecognizing(
+          audioPath: wavPath,
+          priority: settings.defaultTodoPriority,
+        );
         todoId = todo.id;
       }
 
@@ -356,17 +396,41 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   Set<String> _selectedIds = {}; // Track selected todo IDs
   final Set<String> _statusUpdatingIds =
       {}; // Track items currently updating status
+  bool _selectionMode = false;
+  // New: current query options for list
+  TodoQueryOptions _queryOptions = const TodoQueryOptions();
 
   @override
   Future<List<TodoItem>> build() async {
     _repository = ref.read(todoRepositoryProvider);
+    // Initialize query options from settings
+    final settings = ref.read(settingsProvider);
+    _queryOptions = TodoQueryOptions(
+      sortField: settings.todoSortField,
+      direction: settings.todoSortDirection,
+      onlyPending: false,
+      categoryId: null,
+    );
+
     // Load todos on initialization
-    final todos = await _repository.getAllTodos(sortByOrder: true);
-    return todos;
+    return _repository.getTodos(_queryOptions);
   }
 
   /// Get currently selected todo IDs
   Set<String> get selectedIds => _selectedIds;
+
+  bool get isSelectionMode => _selectionMode;
+
+  void enableSelectionMode() {
+    _selectionMode = true;
+    state = AsyncValue.data(List<TodoItem>.from(state.value ?? const []));
+  }
+
+  void disableSelectionMode() {
+    _selectionMode = false;
+    _selectedIds.clear();
+    state = AsyncValue.data(List<TodoItem>.from(state.value ?? const []));
+  }
 
   /// Toggle selection of a todo
   void toggleSelection(String id) {
@@ -419,8 +483,13 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Load all todos from database
   Future<void> loadTodos() async {
-    final todos = await _repository.getAllTodos(sortByOrder: true);
-    state = AsyncValue.data(todos);
+    state = AsyncValue.data(await _repository.getTodos(_queryOptions));
+  }
+
+  /// Set query options and refresh list
+  Future<void> setQueryOptions(TodoQueryOptions options) async {
+    _queryOptions = options;
+    await loadTodos();
   }
 
   /// Toggle todo completion status
@@ -536,7 +605,29 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
+    // Schedule or clear system notification for this todo via ReminderService
+    try {
+      await ref
+          .read(reminderServiceProvider)
+          .scheduleReminderForTodo(refreshed);
+    } catch (e) {
+      // Do not fail the UI update if scheduling fails; log for debugging
+      // ignore: avoid_print
+      print('Failed to schedule reminder for todo $id: $e');
+    }
     return refreshed;
+  }
+
+  /// Update priority for a todo and refresh list state
+  Future<void> updatePriority(String id, TodoPriority priority) async {
+    await _repository.updatePriority(id, priority);
+    await loadTodos();
+  }
+
+  /// Set tags for a todo and refresh
+  Future<void> setTags(String todoId, List<String> tagIds) async {
+    await _repository.setTags(todoId, tagIds);
+    ref.invalidate(tagsForTodoProvider(todoId));
   }
 
   /// Update due time and refresh list state
@@ -564,6 +655,98 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
     return refreshed;
+  }
+
+  Future<TodoItem?> updateCategory(String id, String? categoryId) async {
+    await _repository.updateCategory(id, categoryId);
+    final refreshed = await _repository.getTodoById(id);
+    if (refreshed == null) {
+      await loadTodos();
+      return null;
+    }
+
+    final currentValue = state.value;
+    if (currentValue == null) {
+      await loadTodos();
+      return refreshed;
+    }
+
+    final updatedTodos = currentValue
+        .map((todo) => todo.id == id ? refreshed : todo)
+        .toList(growable: false);
+    state = AsyncValue.data(updatedTodos);
+    return refreshed;
+  }
+
+  /// Move a todo to a category and insert it at a specific index within that category.
+  Future<void> moveTodoToCategoryAtIndex(
+    String id,
+    String? targetCategoryId,
+    int targetIndex, {
+    String? sourceGroupKey,
+    int? sourceIndex,
+  }) async {
+    final currentValue =
+        state.value ?? await _repository.getAllTodos(sortByOrder: true);
+    final movingTodo = currentValue.firstWhere(
+      (todo) => todo.id == id,
+      orElse: () => throw StateError('Todo not found: $id'),
+    );
+
+    final sourceCategoryId = movingTodo.categoryId;
+    final inferredTargetGroupKey =
+        targetCategoryId ?? TodoGroupingService.uncategorizedGroupKey;
+    final sameGroupByCategory = sourceCategoryId == targetCategoryId;
+    final sameGroup = sourceGroupKey == null
+        ? sameGroupByCategory
+        : sourceGroupKey == inferredTargetGroupKey;
+    final sourceGroup = currentValue
+        .where((todo) => todo.categoryId == sourceCategoryId && todo.id != id)
+        .toList();
+    final targetGroup = sameGroupByCategory
+        ? sourceGroup
+        : currentValue
+            .where(
+                (todo) => todo.categoryId == targetCategoryId && todo.id != id)
+            .toList();
+
+    var adjustedTargetIndex = targetIndex;
+    if (sameGroup && sourceIndex != null && sourceIndex < adjustedTargetIndex) {
+      adjustedTargetIndex -= 1;
+    }
+
+    final clampedIndex = adjustedTargetIndex.clamp(0, targetGroup.length);
+    final movedTodo = movingTodo.copyWith(categoryId: targetCategoryId);
+
+    targetGroup.insert(clampedIndex, movedTodo);
+
+    final updatedById = <String, TodoItem>{};
+    final orderMap = <String, int>{};
+    for (var i = 0; i < targetGroup.length; i++) {
+      final updatedTodo = targetGroup[i].copyWith(orderIndex: i);
+      updatedById[updatedTodo.id] = updatedTodo;
+      orderMap[updatedTodo.id] = i;
+    }
+
+    if (!sameGroupByCategory) {
+      for (var i = 0; i < sourceGroup.length; i++) {
+        final updatedTodo = sourceGroup[i].copyWith(orderIndex: i);
+        updatedById[updatedTodo.id] = updatedTodo;
+        orderMap[updatedTodo.id] = i;
+      }
+    }
+
+    final updatedTodos = currentValue
+        .map((todo) => updatedById[todo.id] ?? todo)
+        .toList(growable: false);
+    state = AsyncValue.data(updatedTodos);
+
+    if (!sameGroupByCategory) {
+      await _repository.updateCategory(id, targetCategoryId);
+    }
+
+    final dbHelper = ref.read(databaseHelperProvider);
+    await dbHelper.updateOrderIndices(orderMap);
   }
 
   /// Delete a todo
@@ -630,6 +813,46 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     state = AsyncValue.data(items);
   }
 
+  /// Reorder todos within a single category group.
+  Future<void> reorderTodosInGroup(
+    List<TodoItem> groupItems,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    if (groupItems.isEmpty) {
+      return;
+    }
+
+    if (oldIndex < 0 ||
+        oldIndex >= groupItems.length ||
+        newIndex < 0 ||
+        newIndex >= groupItems.length) {
+      return;
+    }
+
+    final reorderedGroup = List<TodoItem>.from(groupItems);
+    final movedItem = reorderedGroup.removeAt(oldIndex);
+    reorderedGroup.insert(newIndex, movedItem);
+
+    final currentValue =
+        state.value ?? await _repository.getAllTodos(sortByOrder: true);
+    final updatedById = <String, TodoItem>{};
+    final orderMap = <String, int>{};
+    for (var i = 0; i < reorderedGroup.length; i++) {
+      final updatedTodo = reorderedGroup[i].copyWith(orderIndex: i);
+      updatedById[updatedTodo.id] = updatedTodo;
+      orderMap[updatedTodo.id] = i;
+    }
+
+    final updatedTodos = currentValue
+        .map((todo) => updatedById[todo.id] ?? todo)
+        .toList(growable: false);
+    state = AsyncValue.data(updatedTodos);
+
+    final dbHelper = ref.read(databaseHelperProvider);
+    await dbHelper.updateOrderIndices(orderMap);
+  }
+
   /// Reorder todos within a specific status section.
   Future<void> reorderTodosInSection({
     required bool isPendingSection,
@@ -682,4 +905,108 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 final todoListProvider =
     AsyncNotifierProvider<TodoListNotifier, List<TodoItem>>(() {
   return TodoListNotifier();
+});
+
+/// Global provider holding persisted group order map so UI can react to changes.
+class GroupOrderMapNotifier extends Notifier<Map<String, int>> {
+  @override
+  Map<String, int> build() => {};
+
+  void setMap(Map<String, int> map) => state = map;
+}
+
+final groupOrderMapProvider =
+    NotifierProvider<GroupOrderMapNotifier, Map<String, int>>(() {
+  return GroupOrderMapNotifier();
+});
+
+/// Provider to expose a single TodoItem by id, derived from [todoListProvider].
+final todoByIdProvider = Provider.family<TodoItem?, String>((ref, id) {
+  final listAsync = ref.watch(todoListProvider);
+  return listAsync.maybeWhen(
+    data: (items) {
+      for (final t in items) {
+        if (t.id == id) return t;
+      }
+      return null;
+    },
+    orElse: () => null,
+  );
+});
+
+/// Lightweight summary for toolbar/badges without exposing the full todo list.
+final todoSummaryProvider =
+    Provider<({int totalCount, int completedCount})>((ref) {
+  final todosAsync = ref.watch(todoListProvider);
+  return todosAsync.maybeWhen(
+    data: (todos) {
+      var completedCount = 0;
+      for (final todo in todos) {
+        if (todo.status == TodoStatus.completed) {
+          completedCount += 1;
+        }
+      }
+      return (totalCount: todos.length, completedCount: completedCount);
+    },
+    orElse: () => (totalCount: 0, completedCount: 0),
+  );
+});
+
+/// Provider that returns the ordered list of group keys computed from current todos and settings.
+final todoGroupKeysProvider = Provider<List<String>>((ref) {
+  final todosAsync = ref.watch(todoListProvider);
+  final categories =
+      ref.watch(categoryListProvider).asData?.value ?? const <Category>[];
+  final settings = ref.watch(settingsProvider);
+  final groupingService = ref.read(todoGroupingServiceProvider);
+  // Read persisted group order map from global provider
+  final groupOrderMap = ref.watch(groupOrderMapProvider);
+
+  return todosAsync.maybeWhen(
+    data: (todos) {
+      final groups = groupingService.buildGroups(
+        todos: todos,
+        categories: categories,
+        sortField: settings.todoSortField,
+        direction: settings.todoSortDirection,
+        aggregateCompletedTodos: settings.aggregateCompletedTodos,
+        groupOrderMap: groupOrderMap,
+      );
+      return groups.map((g) => g.groupKey).toList(growable: false);
+    },
+    orElse: () => const <String>[],
+  );
+});
+
+/// Provider family to expose a single `TodoGroup` by groupKey derived from current todos.
+final todoGroupProvider = Provider.family<TodoGroup?, String>((ref, groupKey) {
+  final todosAsync = ref.watch(todoListProvider);
+  final categories =
+      ref.watch(categoryListProvider).asData?.value ?? const <Category>[];
+  final settings = ref.watch(settingsProvider);
+  final groupingService = ref.read(todoGroupingServiceProvider);
+
+  return todosAsync.maybeWhen(
+    data: (todos) {
+      final groupOrderMap = ref.watch(groupOrderMapProvider);
+      final groups = groupingService.buildGroups(
+        todos: todos,
+        categories: categories,
+        sortField: settings.todoSortField,
+        direction: settings.todoSortDirection,
+        aggregateCompletedTodos: settings.aggregateCompletedTodos,
+        groupOrderMap: groupOrderMap,
+      );
+      for (final g in groups) {
+        if (g.groupKey == groupKey) return g;
+      }
+      return null;
+    },
+    orElse: () => null,
+  );
+});
+
+final categoryListProvider = FutureProvider<List<Category>>((ref) async {
+  final repository = ref.read(categoryRepositoryProvider);
+  return repository.getCategories();
 });

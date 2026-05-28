@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/app_providers.dart';
-import '../models/todo_item.dart';
 
 /// Floating action toolbar for batch operations on todos
 class FloatingActionToolbar extends ConsumerWidget {
@@ -9,67 +8,56 @@ class FloatingActionToolbar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todosAsync = ref.watch(todoListProvider);
+    final summary = ref.watch(todoSummaryProvider);
     final notifier = ref.read(todoListProvider.notifier);
+    final hasCompletedTodos = summary.completedCount > 0;
+    final hasSelectedTodos = notifier.selectedIds.isNotEmpty;
 
-    return todosAsync.when(
-      data: (todos) {
-        final hasCompletedTodos =
-            todos.any((todo) => todo.status == TodoStatus.completed);
-        final hasSelectedTodos = notifier.selectedIds.isNotEmpty;
+    // Don't show toolbar if no completed todos and no selected todos.
+    if (!hasCompletedTodos && !hasSelectedTodos) {
+      return const SizedBox.shrink();
+    }
 
-        // Don't show toolbar if no completed todos and no selected todos
-        if (!hasCompletedTodos && !hasSelectedTodos) {
-          return const SizedBox.shrink();
-        }
-
-        return Positioned(
-          left: 16,
-          bottom: 16,
-          child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Clean button - always shown when there are completed todos
-                  if (hasCompletedTodos)
-                    IconButton(
-                      icon: const Icon(Icons.cleaning_services),
-                      tooltip: '清除所有已完成待办',
-                      onPressed: () => _confirmDeleteAllCompleted(context, ref),
-                      color: Colors.orange,
-                    ),
-
-                  // Complete and Delete buttons - shown when items are selected
-                  if (hasSelectedTodos) ...[
-                    const VerticalDivider(width: 1),
-                    IconButton(
-                      icon: const Icon(Icons.check),
-                      tooltip: '完成选中的待办',
-                      onPressed: () => _completeSelected(context, ref),
-                      color: Colors.green,
-                    ),
-                    const VerticalDivider(width: 1),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      tooltip: '删除选中的待办',
-                      onPressed: () => _confirmDeleteSelected(context, ref),
-                      color: Colors.red,
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return Positioned(
+      left: 16,
+      bottom: 16,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasCompletedTodos)
+                IconButton(
+                  icon: const Icon(Icons.cleaning_services),
+                  tooltip: '清除所有已完成待办',
+                  onPressed: () => _confirmDeleteAllCompleted(context, ref),
+                  color: Colors.orange,
+                ),
+              if (hasSelectedTodos) ...[
+                const VerticalDivider(width: 1),
+                IconButton(
+                  icon: const Icon(Icons.check),
+                  tooltip: '完成选中的待办',
+                  onPressed: () => _completeSelected(context, ref),
+                  color: Colors.green,
+                ),
+                const VerticalDivider(width: 1),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: '删除选中的待办',
+                  onPressed: () => _confirmDeleteSelected(context, ref),
+                  color: Colors.red,
+                ),
+              ],
+            ],
           ),
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+        ),
+      ),
     );
   }
 

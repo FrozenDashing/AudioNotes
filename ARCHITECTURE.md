@@ -1,4 +1,6 @@
-# AudioNotes - Complete File Structure
+# AudioNotes - Complete Architecture
+
+## Project Structure
 
 ```
 AudioNotes/
@@ -8,23 +10,54 @@ AudioNotes/
 │   │
 │   ├── 📦 Models (lib/models/)
 │   │   ├── todo_item.dart                 # Todo entity with JSON serialization
-│   │   └── speech_segment.dart            # ASR segment & partial transcript models
+│   │   ├── todo_group.dart                # Todo group entity for category organization
+│   │   ├── category.dart                  # Category entity
+│   │   ├── tag.dart                       # Tag entity
+│   │   ├── speech_segment.dart            # ASR segment & partial transcript models
+│   │   ├── todo_query_options.dart        # Query options for filtering/sorting
+│   │   ├── todo_sort.dart                 # Sorting options
+│   │   ├── todo_priority.dart             # Priority levels
+│   │   └── todo_drag_data.dart            # Drag and drop data model
 │   │
 │   ├── 💾 Data Layer (lib/data/)
-│   │   └── database_helper.dart           # SQLite CRUD operations & schema
+│   │   ├── database_helper.dart           # SQLite CRUD operations & schema
+│   │   ├── todo_repository.dart           # Todo data abstraction
+│   │   ├── category_repository.dart       # Category data abstraction
+│   │   ├── tag_repository.dart            # Tag data abstraction
+│   │   └── reminder_repository.dart       # Reminder data abstraction
 │   │
 │   ├── 🔧 Services (lib/services/)
-│   │   └── asr_platform_service.dart      # Platform channel interface for native ASR
+│   │   ├── asr_platform_service.dart      # Platform channel interface for native ASR
+│   │   ├── todo_grouping_service.dart     # Service for organizing todos by category
+│   │   ├── recorder_service.dart          # Audio recording service
+│   │   ├── recognition_service.dart       # Speech recognition service
+│   │   ├── notification_service.dart      # Local notification service
+│   │   ├── reminder_service.dart          # Reminder scheduling service
+│   │   ├── model_manager_service.dart     # Vosk model management
+│   │   ├── settings_service.dart          # Settings management
+│   │   └── audio_playback_service.dart    # Audio playback service
 │   │
 │   ├── ⚡ State Management (lib/providers/)
 │   │   └── app_providers.dart             # Riverpod providers & notifiers
+│   │   └── settings_provider.dart         # Settings state management
 │   │
 │   ├── 🖼️ Screens (lib/screens/)
-│   │   └── home_screen.dart               # Main todo list screen with recording
+│   │   ├── home_screen.dart               # Main todo list screen with category grouping
+│   │   ├── category_create_screen.dart    # Category creation UI
+│   │   ├── category_picker_screen.dart    # Category selection UI
+│   │   ├── tag_create_screen.dart         # Tag creation UI
+│   │   ├── tag_picker_screen.dart         # Tag selection UI
+│   │   ├── settings_screen.dart           # Settings UI
+│   │   └── model_selection_screen.dart    # Model selection UI
 │   │
 │   └── 🧩 Widgets (lib/widgets/)
 │       ├── todo_item_card.dart            # Individual todo card with edit/delete
-│       └── recording_overlay.dart         # Recording status overlay UI
+│       ├── todo_group_section.dart        # Todo group section with category header
+│       ├── recording_overlay.dart         # Recording status overlay UI
+│       ├── audio_player_widget.dart       # Audio playback controls
+│       ├── floating_action_toolbar.dart   # Batch operation toolbar
+│       ├── theme_color_picker.dart        # Theme color selection
+│       └── font_size_slider.dart          # Font size adjustment
 │
 ├── 🤖 Android Native (android/)
 │   └── src/main/kotlin/com/audionotes/audio_notes/
@@ -40,6 +73,7 @@ AudioNotes/
 │
 ├── 📝 Documentation
 │   ├── README.md                          # Main documentation & overview
+│   ├── ARCHITECTURE.md                    # Architecture overview
 │   ├── SETUP.md                           # Detailed setup instructions
 │   ├── CONTRIBUTING.md                    # Contribution guidelines
 │   ├── CHANGELOG.md                       # Version history
@@ -68,9 +102,11 @@ main.dart
        └─> HomeScreen
             ├─> todoListProvider (Riverpod)
             │    └─> databaseHelperProvider
+            │    └─> todoGroupingService
             ├─> recordingStateProvider
             ├─> partialTranscriptProvider
-            └─> TodoItemCard widgets
+            ├─> settingsProvider
+            └─> TodoGroupSection widgets
                  └─> Individual todo operations
                       ├─> Toggle status
                       ├─> Edit text
@@ -84,11 +120,16 @@ asr_platform_service.dart
   └─> Commands: start, stop, cancel, reRecord
 
 database_helper.dart
-  ├─> Table: todo_item
+  ├─> Tables: todo_item, categories, tags, todo_tags, reminders
   ├─> insertTodo()
   ├─> getAllTodos()
+  ├─> getTodosByCategory()
+  ├─> getTodosByTag()
   ├─> updateTodo()
   ├─> deleteTodo()
+  ├─> insertCategory()
+  ├─> insertTag()
+  ├─> upsertReminder()
   └─> updateOrderIndices()
 
 Native Plugins (Android/iOS)
@@ -96,6 +137,17 @@ Native Plugins (Android/iOS)
   ├─> VAD Processing
   ├─> Vosk ASR Recognition
   └─> Event Callbacks to Dart
+
+todo_grouping_service.dart
+  ├─> Receives flat todo list
+  ├─> Groups todos by category
+  ├─> Sorts groups and items within groups
+  └─> Returns structured TodoGroup list
+
+notification_service.dart
+  ├─> Schedule local notifications
+  ├─> Handle notification tap events
+  └─> Manage notification permissions
 ```
 
 ## Data Flow Diagram
@@ -115,17 +167,23 @@ User Action
     │                              └─> Save audio file + Send to Dart
     │                                   └─> todoListNotifier.addFromSegment()
     │                                        └─> databaseHelper.insertTodo()
-    │                                             └─> UI rebuilds with new todo
+    │                                             └─> todoGroupingService.organizeByCategory()
+    │                                                  └─> UI rebuilds with grouped todos
     │
     ├─> Tap Checkbox
     │     └─> todoListNotifier.toggleStatus()
     │          └─> databaseHelper.updateTodo()
     │               └─> UI updates (strikethrough)
     │
-    ├─> Drag & Drop
+    ├─> Drag & Drop (within group)
     │     └─> todoListNotifier.reorderTodos()
     │          └─> databaseHelper.updateOrderIndices()
     │               └─> New order persisted
+    │
+    ├─> Drag & Drop (groups)
+    │     └─> todoListNotifier.reorderGroups()
+    │          └─> update group order in settings
+    │               └─> New group order persisted
     │
     └─> Long Press → Edit/Delete/Re-record
           ├─> Edit: Show dialog → Update text → Save to DB
@@ -159,7 +217,16 @@ Riverpod Providers
 │         ├─> toggleStatus()
 │         ├─> updateText()
 │         ├─> deleteTodo()
-│         └─> reorderTodos()
+│         ├─> reorderTodos()
+│         └─> reorderGroups()
+│
+├─> settingsProvider (StateNotifierProvider)
+│    └─> SettingsNotifier
+│         └─> App settings (theme, font size, defaults)
+│
+├─> todoGroupingServiceProvider (Provider)
+│    └─> TodoGroupingService
+│         └─> Organizes todos into groups by category
 │
 └─> vadConfigProvider (StateNotifierProvider)
      └─> VADConfigNotifier
@@ -168,17 +235,32 @@ Riverpod Providers
 
 ## Key Design Patterns
 
-1. **Repository Pattern**: DatabaseHelper abstracts SQLite operations
+1. **Repository Pattern**: DatabaseHelper and Repository classes abstract SQLite operations
 2. **Provider Pattern**: Riverpod for reactive state management
-3. **Observer Pattern**: Streams for ASR events
+3. **Observer Pattern**: Streams for ASR events and state changes
 4. **Command Pattern**: Platform channel commands (start, stop, etc.)
 5. **DTO Pattern**: JSON serializable models for data transfer
-6. **Singleton Pattern**: DatabaseHelper instance
+6. **Singleton Pattern**: DatabaseHelper and service instances
 7. **Factory Pattern**: Model creation from JSON/maps
 8. **Strategy Pattern**: VAD configurable parameters
 9. **Template Method**: Platform-specific implementations (Android/iOS)
 10. **MVC Pattern**: Separation of Models, Views (Widgets), Controllers (Providers)
+11. **Decorator Pattern**: TodoGroupSection wraps TodoItemCards with category context
+12. **Adapter Pattern**: TodoGroupingService adapts flat list to grouped structure
+13. **Facade Pattern**: Services provide simplified interfaces to complex subsystems
 
----
+## Category Grouping Architecture
 
-*This structure ensures maintainability, testability, and scalability.*
+The category grouping feature introduces a new layer that transforms the flat todo list into a hierarchical structure:
+
+```
+Flat Todo List → TodoGroupingService → Grouped Todo Structure → UI
+    ↓                    ↓                      ↓              ↓
+[Todo A(cat1),    Organize by category    [Group cat1:     Render as
+ Todo B(cat2),  →  Sort groups & items  →  [Todo A,        collapsible
+ Todo C(cat1)]                             Todo C],        sections
+                                          Group cat2:
+                                          [Todo B]]
+```
+
+This architecture ensures maintainability, testability, and scalability while preserving the core functionality of the offline speech-to-text todo application.

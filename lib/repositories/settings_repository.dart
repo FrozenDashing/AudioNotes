@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart'; // For Color
 import '../models/settings_state.dart';
+import '../models/todo_priority.dart';
+import '../models/todo_sort.dart';
 
 /// Repository for managing settings persistence
 class SettingsRepository {
@@ -11,6 +13,10 @@ class SettingsRepository {
   static const String _fontSizeOptionKey = 'font_size_option';
   static const String _customFontScaleKey = 'custom_font_scale';
   static const String _followSystemFontSizeKey = 'follow_system_font_size';
+  static const String _todoSortFieldKey = 'todo_sort_field';
+  static const String _todoSortDirectionKey = 'todo_sort_direction';
+  static const String _defaultTodoPriorityKey = 'default_todo_priority';
+  static const String _aggregateCompletedTodosKey = 'aggregate_completed_todos';
 
   /// Load settings from shared preferences
   Future<SettingsState> loadSettings() async {
@@ -19,6 +25,10 @@ class SettingsRepository {
     // Get string values from preferences
     String themeModeStr = prefs.getString(_themeModeKey) ?? 'system';
     String fontSizeOptionStr = prefs.getString(_fontSizeOptionKey) ?? 'medium';
+
+    final todoSortFieldStr = prefs.getString(_todoSortFieldKey) ?? 'manual';
+    final todoSortDirectionStr =
+        prefs.getString(_todoSortDirectionKey) ?? 'asc';
 
     return SettingsState(
       currentModelId: prefs.getString(_currentModelIdKey) ?? 'auto',
@@ -36,6 +46,22 @@ class SettingsRepository {
       ),
       customFontScale: prefs.getDouble(_customFontScaleKey) ?? 1.0,
       followSystemFontSize: prefs.getBool(_followSystemFontSizeKey) ?? false,
+      todoSortField: TodoSortField.values.firstWhere(
+        (e) => e.toString().split('.')[1] == todoSortFieldStr,
+        orElse: () => TodoSortField.manual,
+      ),
+      todoSortDirection: SortDirection.values.firstWhere(
+        (e) => e.toString().split('.')[1] == todoSortDirectionStr,
+        orElse: () => SortDirection.asc,
+      ),
+      defaultTodoPriority: TodoPriority.values.firstWhere(
+        (e) =>
+            e.toString().split('.')[1] ==
+            (prefs.getString(_defaultTodoPriorityKey) ?? 'normal'),
+        orElse: () => TodoPriority.normal,
+      ),
+      aggregateCompletedTodos:
+          prefs.getBool(_aggregateCompletedTodosKey) ?? false,
     );
   }
 
@@ -57,6 +83,23 @@ class SettingsRepository {
         await prefs.setDouble(_customFontScaleKey, settings.customFontScale) &&
         await prefs.setBool(
             _followSystemFontSizeKey, settings.followSystemFontSize);
+
+    // Save sort preferences
+    result = result &&
+        await prefs.setString(
+            _todoSortFieldKey, settings.todoSortField.toString().split('.')[1]);
+    result = result &&
+        await prefs.setString(_todoSortDirectionKey,
+            settings.todoSortDirection.toString().split('.')[1]);
+
+    // Save default todo priority
+    result = result &&
+        await prefs.setString(_defaultTodoPriorityKey,
+            settings.defaultTodoPriority.toString().split('.')[1]);
+
+    result = result &&
+        await prefs.setBool(
+            _aggregateCompletedTodosKey, settings.aggregateCompletedTodos);
 
     return result;
   }

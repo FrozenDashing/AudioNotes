@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
+import '../models/todo_priority.dart';
+import '../models/todo_sort.dart';
+import '../models/todo_query_options.dart';
+import 'app_providers.dart';
 
 /// Provider for accessing settings repository
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -64,6 +68,32 @@ class SettingsNotifier extends Notifier<SettingsState> {
     await _saveSettings();
   }
 
+  /// Set todo list sort field preference
+  Future<void> setTodoSortField(TodoSortField field) async {
+    state = state.copyWith(todoSortField: field);
+    await _saveSettings();
+    // Apply immediately to list
+    await ref.read(todoListProvider.notifier).setQueryOptions(
+          TodoQueryOptions(
+            sortField: state.todoSortField,
+            direction: state.todoSortDirection,
+          ),
+        );
+  }
+
+  /// Set todo list sort direction preference
+  Future<void> setTodoSortDirection(SortDirection direction) async {
+    state = state.copyWith(todoSortDirection: direction);
+    await _saveSettings();
+    // Apply immediately to list
+    await ref.read(todoListProvider.notifier).setQueryOptions(
+          TodoQueryOptions(
+            sortField: state.todoSortField,
+            direction: state.todoSortDirection,
+          ),
+        );
+  }
+
   /// Set custom theme color
   Future<void> setCustomThemeColor(Color? color) async {
     state = state.copyWith(customThemeColor: color);
@@ -92,6 +122,25 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> resetToDefaults() async {
     state = SettingsState.initial();
     await _saveSettings();
+    await ref.read(todoListProvider.notifier).setQueryOptions(
+          TodoQueryOptions(
+            sortField: state.todoSortField,
+            direction: state.todoSortDirection,
+          ),
+        );
+  }
+
+  /// Set default priority for newly created todos
+  Future<void> setDefaultTodoPriority(TodoPriority p) async {
+    state = state.copyWith(defaultTodoPriority: p);
+    await _saveSettings();
+  }
+
+  /// Toggle whether completed todos are aggregated into one group
+  Future<void> setAggregateCompletedTodos(bool enabled) async {
+    state = state.copyWith(aggregateCompletedTodos: enabled);
+    await _saveSettings();
+    await ref.read(todoListProvider.notifier).loadTodos();
   }
 }
 

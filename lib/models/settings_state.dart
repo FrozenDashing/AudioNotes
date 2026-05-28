@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/todo_sort.dart';
+import '../models/todo_priority.dart';
 
 /// Enum for theme modes
 enum ThemeModeOption { system, light, dark, custom }
@@ -10,24 +12,36 @@ enum FontSizeOption { small, medium, large, custom }
 class SettingsState {
   /// Current model ID
   final String currentModelId;
-  
+
   /// Whether to auto-select model
   final bool autoModelSelect;
-  
+
   /// Theme mode option
   final ThemeModeOption themeMode;
-  
+
   /// Custom theme color (when themeMode is custom)
   final Color? customThemeColor;
-  
+
   /// Font size option
   final FontSizeOption fontSizeOption;
-  
+
   /// Custom font scale (when fontSizeOption is custom)
   final double customFontScale;
-  
+
   /// Whether to follow system font size (accessibility)
   final bool followSystemFontSize;
+
+  /// Todo list sort field preference
+  final TodoSortField todoSortField;
+
+  /// Todo list sort direction preference
+  final SortDirection todoSortDirection;
+
+  /// Default priority for new todos
+  final TodoPriority defaultTodoPriority;
+
+  /// Whether completed todos are aggregated into a dedicated completed group
+  final bool aggregateCompletedTodos;
 
   SettingsState({
     required this.currentModelId,
@@ -37,6 +51,10 @@ class SettingsState {
     required this.fontSizeOption,
     this.customFontScale = 1.0,
     required this.followSystemFontSize,
+    this.todoSortField = TodoSortField.manual,
+    this.todoSortDirection = SortDirection.asc,
+    this.defaultTodoPriority = TodoPriority.normal,
+    this.aggregateCompletedTodos = false,
   });
 
   /// Default settings
@@ -49,6 +67,10 @@ class SettingsState {
       fontSizeOption: FontSizeOption.medium,
       customFontScale: 1.0,
       followSystemFontSize: false,
+      todoSortField: TodoSortField.manual,
+      todoSortDirection: SortDirection.asc,
+      defaultTodoPriority: TodoPriority.normal,
+      aggregateCompletedTodos: false,
     );
   }
 
@@ -61,6 +83,10 @@ class SettingsState {
     FontSizeOption? fontSizeOption,
     double? customFontScale,
     bool? followSystemFontSize,
+    TodoSortField? todoSortField,
+    SortDirection? todoSortDirection,
+    TodoPriority? defaultTodoPriority,
+    bool? aggregateCompletedTodos,
   }) {
     return SettingsState(
       currentModelId: currentModelId ?? this.currentModelId,
@@ -70,6 +96,11 @@ class SettingsState {
       fontSizeOption: fontSizeOption ?? this.fontSizeOption,
       customFontScale: customFontScale ?? this.customFontScale,
       followSystemFontSize: followSystemFontSize ?? this.followSystemFontSize,
+      todoSortField: todoSortField ?? this.todoSortField,
+      todoSortDirection: todoSortDirection ?? this.todoSortDirection,
+      defaultTodoPriority: defaultTodoPriority ?? this.defaultTodoPriority,
+      aggregateCompletedTodos:
+          aggregateCompletedTodos ?? this.aggregateCompletedTodos,
     );
   }
 }

@@ -245,6 +245,7 @@ class ModelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Padding(
@@ -281,6 +282,14 @@ class ModelCard extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 PopupMenuButton<String>(
+                  position: PopupMenuPosition.under,
+                  offset: const Offset(0, 8),
+                  elevation: 10,
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  surfaceTintColor: theme.colorScheme.surfaceTint,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   onSelected: (value) {
                     if (value == 'select') {
                       onSelect();
@@ -295,37 +304,78 @@ class ModelCard extends StatelessWidget {
 
                     // Add "Set as current" option if model is downloaded
                     if (model.isDownloaded) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'select',
-                        child: Text('设为当前'),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            const Text('设为当前'),
+                          ],
+                        ),
                       ));
                     }
 
                     // Add "Download" option if not downloaded
                     if (!model.isDownloaded) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'download',
-                        child: Text('下载'),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.download_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            const Text('下载'),
+                          ],
+                        ),
                       ));
                     }
 
                     // Add "Delete" option if downloaded
                     if (model.isDownloaded) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'delete',
-                        child: Text('删除'),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline_rounded,
+                              size: 18,
+                              color: theme.colorScheme.error,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '删除',
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                              ),
+                            ),
+                          ],
+                        ),
                       ));
                     }
 
                     return items;
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(4),
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.more_vert),
+                    child: Icon(
+                      Icons.more_horiz_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],

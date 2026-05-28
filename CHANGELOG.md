@@ -8,16 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial MVP release
-- Flutter app with Riverpod state management
-- SQLite database for todo persistence
-- Platform channel interface for native ASR
-- Android native plugin (Kotlin) with AudioRecord
-- iOS native plugin (Swift) with AVAudioEngine
+- Category-based grouping view for todo items
+- Todo grouping service to organize items by category
+- Collapsible category sections with expand/collapse functionality
+- Drag-and-drop reordering for both categories and todos within categories
+- "Uncategorized" group for todos without assigned categories
+- Priority management (low, medium, high)
+- Deadline and reminder functionality with local notifications
+- Tagging system for enhanced todo organization
+- Repeating task support (daily, weekly)
+- Soft deletion with deletedAt field
+- Confidence scoring for recognition quality assessment
+- Raw transcript storage alongside processed text
+- Model management for Vosk ASR models with download capability
+- Customizable settings for themes, font sizes, and preferences
+- Audio playback functionality for recorded todo items
+- Batch operations for multi-select and bulk actions
+- Comprehensive SQLite schema with todos, categories, tags, and reminders tables
+- Repository pattern implementation for data abstraction
+- Riverpod state management for reactive UI updates
+- Real-time partial transcript display during recording
+- Voice activity detection (VAD) for automatic sentence segmentation
 - Todo CRUD operations (create, read, update, delete)
 - Drag-and-drop reordering of todos
-- Real-time partial transcript display during recording
-- VAD-based automatic sentence segmentation
 - Confidence level indicators for recognition accuracy
 - Edit dialog for modifying todo text
 - Delete confirmation dialog
@@ -27,20 +40,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive README and setup documentation
 - Unit tests for data models
 
-### Planned
-- Vosk ASR engine integration (currently simulated)
-- Actual audio file recording and storage
-- Re-record functionality implementation
-- Floating recording widget for Android
-- Home screen widget for iOS
-- Export notes to text/markdown
-- Search functionality
-- Categories/tags for todos
-- Cloud sync option
-- Dark mode optimizations
-- Accessibility improvements
-- Integration tests
-- Performance profiling and optimization
+### Changed
+- Refactored database schema to support advanced features (due dates, reminders, categories, tags)
+- Enhanced TodoItem model with priority, dueAt, remindAt, repeatType, categoryId, pinned, completedAt, deletedAt, orderIndex, confidence, and rawText fields
+- Improved UI layout with category-based grouping structure
+- Restructured data flow to support category grouping and two-tier sorting
+- Enhanced state management with specialized providers for new features
+- Optimized performance for large todo lists with virtual scrolling
+
+### Fixed
+- Audio recording and playback functionality
+- Recognition accuracy and confidence scoring
+- Database migration between schema versions
+- UI responsiveness during large data operations
+- Memory management during extended recording sessions
+- Notification delivery reliability
+
+### Removed
+- Flat todo list view (replaced with category grouping)
+- Global "sort by category" option (replaced with structural grouping)
+
+## [0.2.0] - 2026-05-29
+
+### Added
+- Category-based grouping view implementation
+- Todo grouping service for organizing items by category
+- Collapsible category sections with visual indicators
+- Drag-and-drop functionality for reordering categories
+- "Uncategorized" group for unassigned todos
+- Priority management system (low, medium, high)
+- Deadline and reminder functionality
+- Tagging system with multiple tags per todo
+- Repeating task support (daily, weekly)
+- Soft deletion with recovery capability
+- Confidence scoring for recognition quality
+- Raw transcript storage alongside processed text
+- Enhanced database schema with additional tables
+
+### Changed
+- Updated database schema to version 5 with new fields and tables
+- Restructured UI from flat list to hierarchical category groups
+- Modified sorting behavior to support two-tier organization (categories and items within categories)
+- Enhanced TodoItem model with additional fields for advanced features
+- Improved error handling and user feedback mechanisms
 
 ## [0.1.0] - 2026-05-25
 
@@ -53,6 +95,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native platform channel setup
 - Basic Android and iOS plugins (stub implementations)
 - Documentation and setup guides
+- Basic todo CRUD operations
+- Offline speech recognition with Vosk ASR
+- Real-time transcription during recording
+- Voice activity detection for sentence segmentation
 
 ---
 

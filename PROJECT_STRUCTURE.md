@@ -28,29 +28,39 @@ AudioNotes/
 │   └── stages/                 # Development stage documents
 │       ├── QOL/                # Quality of life improvements
 │       │   └── to_improve.md
+│       ├── UI/                 # UI/UX development documents
+│       │   └── category分组视图下一阶段大改造执行文档.md
 │       ├── develop/            # Development plans
 │       │   ├── development_plan.md
 │       │   └── settings-develop.md
 │       └── mvp/                # MVP stage documents
-│           ├── guidance.md
-│           ├── instruction.md
-│           ├── revision.md
-│           └── revision2.md
+│           └── ... 4 files, 0 dirs not shown
 ├── ios/                        # iOS native implementation
 │   ├── Flutter/                # Flutter engine files
 │   └── Runner/                 # iOS app source code (Swift)
 ├── lib/                        # Main Flutter application source code
 │   ├── data/                   # Data sources and database helpers
+│   │   ├── category_repository.dart
 │   │   ├── database_helper.dart
+│   │   ├── reminder_repository.dart
+│   │   ├── tag_repository.dart
+│   │   ├── todo_query_builder.dart
 │   │   └── todo_repository.dart
 │   ├── domain/                 # Business logic and use cases
 │   │   └── usecases/
 │   │       └── create_todo_from_recording_usecase.dart
 │   ├── models/                 # Data models
+│   │   ├── category.dart       # Category model
 │   │   ├── model_metadata.dart # Model metadata for ASR models
 │   │   ├── settings_state.dart # Settings state model
 │   │   ├── speech_segment.dart # Speech segment model
-│   │   └── todo_item.dart      # Todo item model
+│   │   ├── tag.dart           # Tag model
+│   │   ├── todo_drag_data.dart # Drag and drop data model
+│   │   ├── todo_group.dart    # Todo group model for category grouping
+│   │   ├── todo_item.dart     # Todo item model
+│   │   ├── todo_priority.dart # Todo priority model
+│   │   ├── todo_query_options.dart # Query options model
+│   │   └── todo_sort.dart     # Sorting model
 │   ├── providers/              # Riverpod state providers
 │   │   ├── app_providers.dart  # Main app providers
 │   │   └── settings_provider.dart # Settings provider
@@ -58,16 +68,25 @@ AudioNotes/
 │   │   ├── model_repository.dart # Model metadata repository
 │   │   └── settings_repository.dart # Settings repository
 │   ├── screens/                # UI screens
-│   │   ├── home_screen.dart    # Main home screen
+│   │   ├── settings/           # Settings-related screens
+│   │   │   └── ... 3 files, 0 dirs not shown
+│   │   ├── category_create_screen.dart # Category creation screen
+│   │   ├── category_picker_screen.dart # Category selection screen
+│   │   ├── home_screen.dart    # Main home screen with category grouping
 │   │   ├── model_selection_screen.dart # Model selection screen
-│   │   └── settings_screen.dart # Settings screen
+│   │   ├── settings_screen.dart # Settings screen
+│   │   ├── tag_create_screen.dart # Tag creation screen
+│   │   └── tag_picker_screen.dart # Tag selection screen
 │   ├── services/               # Business logic services
 │   │   ├── asr_platform_service.dart # ASR platform service
 │   │   ├── audio_playback_service.dart # Audio playback service
 │   │   ├── model_manager_service.dart # Model manager service
+│   │   ├── notification_service.dart # Notification service
 │   │   ├── recognition_service.dart # Recognition service
 │   │   ├── recorder_service.dart # Recording service
-│   │   └── settings_service.dart # Settings service
+│   │   ├── reminder_service.dart # Reminder service
+│   │   ├── settings_service.dart # Settings service
+│   │   └── todo_grouping_service.dart # Todo grouping service for category organization
 │   ├── utils/                  # Utility functions
 │   │   ├── audio_chunker.dart  # Audio chunking utilities
 │   │   └── audio_file_cleanup.dart # Audio file cleanup utilities
@@ -78,8 +97,10 @@ AudioNotes/
 │   │   ├── font_size_slider.dart # Font size slider widget
 │   │   ├── recording_overlay.dart # Recording overlay widget
 │   │   ├── theme_color_picker.dart # Theme color picker widget
+│   │   ├── todo_group_section.dart # Todo group section widget for category grouping
 │   │   └── todo_item_card.dart # Todo item card widget
 │   └── main.dart               # Application entry point
+├── review/                     # Project review and analysis documents
 ├── test/                       # Test files
 │   ├── models/                 # Model tests
 │   │   └── todo_item_test.dart
@@ -93,14 +114,12 @@ AudioNotes/
 ├── ARCHITECTURE.md             # Detailed architecture documentation
 ├── CHANGELOG.md                # Version history
 ├── CONTRIBUTING.md             # Contribution guidelines
-├── PROJECT_SUMMARY.md          # Project summary
-├── QUICK_REFERENCE.md          # Quick reference guide
+├── PROJECT_STRUCTURE.md        # Project structure documentation
+├── QUICK_START.md              # Quick start guide
 ├── README.md                   # Main project documentation
-├── SETUP.md                    # Setup instructions
-├── VISUAL_OVERVIEW.md          # Visual overview of the app
 ├── analysis_options.yaml       # Dart analysis configuration
-├── pubspec.yaml                # Project dependencies and assets
-└── .gitignore                  # Git ignore rules
+├── devtools_options.yaml       # DevTools configuration
+└── pubspec.yaml                # Project dependencies and assets
 ```
 
 ## Key Directories and Files Explained
@@ -110,12 +129,12 @@ This is the heart of the Flutter application containing all Dart code:
 
 - **`data/`**: Handles database interactions and data access using SQLite through the `sqflite` package.
 - **`domain/`**: Contains business logic and use cases, following Clean Architecture principles.
-- **[models/](./lib/models)**: Defines data structures used throughout the application.
-- **[providers/](./lib/providers)**: Manages state using Riverpod for reactive programming.
-- **[repositories/](./lib/repositories)**: Provides abstraction for data operations.
-- **[screens/](./lib/screens)**: Contains the main UI screens of the application.
-- **[services/](./lib/services)**: Implements core business logic like audio recording, speech recognition, and model management.
-- **[widgets/](./lib/widgets)**: Reusable UI components that can be composed to build screens.
+- **`models/`**: Defines data structures used throughout the application, including the new category grouping models.
+- **`providers/`**: Manages state using Riverpod for reactive programming.
+- **`repositories/`**: Provides abstraction for data operations.
+- **`screens/`**: Contains the main UI screens of the application.
+- **`services/`**: Implements core business logic like audio recording, speech recognition, notifications, and the new todo grouping service.
+- **`widgets/`**: Reusable UI components that can be composed to build screens, including the new category grouping widgets.
 
 ### `android/` and `ios/` - Native Code
 These directories contain platform-specific implementations for accessing native APIs:
@@ -126,6 +145,7 @@ These directories contain platform-specific implementations for accessing native
 ### `devlogs/` - Development Documentation
 Contains various documents tracking development progress, issues, and plans:
 
+- **`stages/UI/`**: Documents related to UI/UX improvements, including the category grouping implementation guide.
 - **`stages/mvp/`**: Documents related to the Minimum Viable Product stage.
 - **`stages/develop/`**: Development planning documents.
 - **`issues/`**: Solutions to encountered issues like Kotlin cache errors.
@@ -137,6 +157,8 @@ Contains static assets that are bundled with the application, particularly ASR m
 
 - **`pubspec.yaml`**: Defines project dependencies, assets, and metadata.
 - **`lib/main.dart`**: Entry point of the Flutter application.
-- **[lib/screens/home_screen.dart](./lib/screens/home_screen.dart)**: Main screen where users record audio and see transcribed todos.
-- **[lib/services/asr_platform_service.dart](./lib/services/asr_platform_service.dart)**: Core service that interfaces with Vosk ASR for speech recognition.
-- **[lib/providers/settings_provider.dart](./lib/providers/settings_provider.dart)**: Manages application settings using Riverpod.
+- **`lib/screens/home_screen.dart`**: Main screen where users record audio and see transcribed todos organized by category.
+- **`lib/services/todo_grouping_service.dart`**: Core service that organizes todos by category for the UI.
+- **`lib/widgets/todo_group_section.dart`**: Widget that displays todos grouped by category.
+- **`lib/models/todo_group.dart`**: Data model representing a group of todos by category.
+- **`lib/providers/settings_provider.dart`**: Manages application settings using Riverpod.

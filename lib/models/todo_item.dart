@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'todo_priority.dart';
 
 /// Task lifecycle state (separate from completion status)
 enum TodoTaskState {
@@ -78,6 +79,7 @@ class TodoItem {
   final String? audioPath;
   final TodoTaskState taskState; // Task lifecycle state
   final TodoStatus status; // Completion status
+  final TodoPriority priority;
   final DateTime? dueAt;
   final DateTime? remindAt;
   final TodoRepeatType repeatType;
@@ -102,6 +104,7 @@ class TodoItem {
     this.audioPath,
     this.taskState = TodoTaskState.ready,
     this.status = TodoStatus.pending,
+    this.priority = TodoPriority.normal,
     this.dueAt,
     this.remindAt,
     this.repeatType = TodoRepeatType.none,
@@ -131,6 +134,7 @@ class TodoItem {
       audioPath: json['audio_path'] as String?,
       taskState: TodoTaskState.fromValue(json['task_state'] as int? ?? 2),
       status: TodoStatus.fromValue(json['status'] as int? ?? 0),
+      priority: TodoPriority.fromValue(json['priority'] as int?),
       dueAt: json['due_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['due_at'] as int)
           : null,
@@ -167,6 +171,7 @@ class TodoItem {
       'audio_path': audioPath,
       'task_state': taskState.value,
       'status': status.value,
+      'priority': priority.value,
       'due_at': dueAt?.millisecondsSinceEpoch,
       'remind_at': remindAt?.millisecondsSinceEpoch,
       'repeat_type': repeatType.value,
@@ -194,6 +199,7 @@ class TodoItem {
     String? audioPath,
     TodoTaskState? taskState,
     TodoStatus? status,
+    TodoPriority? priority,
     DateTime? dueAt,
     DateTime? remindAt,
     TodoRepeatType? repeatType,
@@ -218,6 +224,7 @@ class TodoItem {
       audioPath: audioPath ?? this.audioPath,
       taskState: taskState ?? this.taskState,
       status: status ?? this.status,
+      priority: priority ?? this.priority,
       dueAt: dueAt ?? this.dueAt,
       remindAt: remindAt ?? this.remindAt,
       repeatType: repeatType ?? this.repeatType,

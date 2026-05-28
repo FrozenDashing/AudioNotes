@@ -1,6 +1,8 @@
 import '../../services/recorder_service.dart';
 import '../../services/recognition_service.dart';
 import '../../data/todo_repository.dart';
+import '../../repositories/settings_repository.dart';
+import '../../models/todo_priority.dart';
 
 /// Use case for creating a todo from audio recording
 /// This is the core workflow: Record → Save WAV → Recognize → Create Todo
@@ -8,14 +10,17 @@ class CreateTodoFromRecordingUseCase {
   final RecorderService _recorder;
   final RecognitionService _recognition;
   final TodoRepository _repository;
+  final SettingsRepository? _settingsRepository;
 
   CreateTodoFromRecordingUseCase({
     required RecorderService recorder,
     required RecognitionService recognition,
     required TodoRepository repository,
+    SettingsRepository? settingsRepository,
   })  : _recorder = recorder,
         _recognition = recognition,
-        _repository = repository;
+        _repository = repository,
+        _settingsRepository = settingsRepository;
 
   /// Execute the complete workflow
   Future<void> execute() async {
@@ -31,7 +36,18 @@ class CreateTodoFromRecordingUseCase {
       }
 
       // Step 2: Insert todo in recognizing state
-      final todo = await _repository.insertRecognizing(audioPath: wavPath);
+      TodoPriority priority = TodoPriority.normal;
+      if (_settingsRepository != null) {
+        try {
+          final settings = await _settingsRepository!.loadSettings();
+          priority = settings.defaultTodoPriority;
+        } catch (_) {}
+      }
+
+      final todo = await _repository.insertRecognizing(
+        audioPath: wavPath,
+        priority: priority,
+      );
       todoId = todo.id;
 
       // Step 3: Recognize the audio file

@@ -1,5 +1,7 @@
 import 'dart:io';
 import '../models/todo_item.dart';
+import '../models/todo_priority.dart';
+import '../models/todo_query_options.dart';
 import 'database_helper.dart';
 import '../utils/audio_file_cleanup.dart';
 
@@ -11,6 +13,7 @@ class TodoRepository {
   Future<TodoItem> insertRecognizing({
     required String audioPath,
     String text = '',
+    TodoPriority priority = TodoPriority.normal,
   }) async {
     final orderIndex = await _dbHelper.getNextOrderIndex();
 
@@ -22,6 +25,7 @@ class TodoRepository {
       audioPath: audioPath,
       taskState: TodoTaskState.recognizing,
       status: TodoStatus.pending,
+      priority: priority,
       orderIndex: orderIndex,
     );
 
@@ -128,6 +132,16 @@ class TodoRepository {
     await _dbHelper.updateCategory(id, categoryId);
   }
 
+  /// Update the priority of a todo item
+  Future<void> updatePriority(String id, TodoPriority priority) async {
+    await _dbHelper.updatePriority(id, priority);
+  }
+
+  /// Set tags for a todo item
+  Future<void> setTags(String todoId, List<String> tagIds) async {
+    await _dbHelper.setTagsForTodo(todoId, tagIds);
+  }
+
   /// Update the pinned state of a todo item
   Future<void> updatePinned(String id, bool pinned) async {
     await _dbHelper.updatePinned(id, pinned);
@@ -161,7 +175,12 @@ class TodoRepository {
     await _dbHelper.deleteTodo(id);
   }
 
-  /// Get all todos
+  /// Get todos using unified query options
+  Future<List<TodoItem>> getTodos(TodoQueryOptions options) async {
+    return await _dbHelper.getTodos(options);
+  }
+
+  /// Get all todos (legacy helper)
   Future<List<TodoItem>> getAllTodos({bool sortByOrder = false}) async {
     return await _dbHelper.getAllTodos(sortByOrder: sortByOrder);
   }
@@ -169,6 +188,16 @@ class TodoRepository {
   /// Get todos by task state
   Future<List<TodoItem>> getTodosByTaskState(TodoTaskState state) async {
     return await _dbHelper.getTodosByTaskState(state);
+  }
+
+  /// Get todos by category
+  Future<List<TodoItem>> getTodosByCategory(String categoryId) async {
+    return await _dbHelper.getTodosByCategory(categoryId);
+  }
+
+  /// Get todos by tag
+  Future<List<TodoItem>> getTodosByTag(String tagId) async {
+    return await _dbHelper.getTodosByTag(tagId);
   }
 
   /// Get a single todo by ID

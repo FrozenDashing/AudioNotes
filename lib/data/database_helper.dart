@@ -1,12 +1,18 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/todo_item.dart';
+import '../models/category.dart';
+import '../models/tag.dart';
+import '../models/todo_priority.dart';
+import '../models/todo_query_options.dart';
+import '../models/todo_sort.dart';
+import 'todo_query_builder.dart';
 
 /// Database helper for managing todo items
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   DatabaseHelper._init();
 
@@ -50,6 +56,7 @@ class DatabaseHelper {
         audio_path $nullableTextType,
         task_state INTEGER NOT NULL DEFAULT 2,
         status INTEGER NOT NULL DEFAULT 0,
+        priority INTEGER NOT NULL DEFAULT 1,
         due_at $nullableIntType,
         remind_at $nullableIntType,
         repeat_type INTEGER NOT NULL DEFAULT 0,
@@ -70,6 +77,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_created_at ON todo_item(created_at)');
     await db.execute('CREATE INDEX idx_order_index ON todo_item(order_index)');
     await db.execute('CREATE INDEX idx_task_state ON todo_item(task_state)');
+    await db.execute('CREATE INDEX idx_priority ON todo_item(priority)');
     await db.execute('CREATE INDEX idx_due_at ON todo_item(due_at)');
     await db.execute('CREATE INDEX idx_remind_at ON todo_item(remind_at)');
     await db.execute('CREATE INDEX idx_category_id ON todo_item(category_id)');
@@ -215,6 +223,13 @@ class DatabaseHelper {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_reminders_remind_at ON reminders(remind_at)');
     }
+
+    if (oldVersion < 5) {
+      await db.execute(
+          'ALTER TABLE todo_item ADD COLUMN priority INTEGER NOT NULL DEFAULT 1');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_priority ON todo_item(priority)');
+    }
   }
 
   /// Insert a new todo item
@@ -242,14 +257,38 @@ class DatabaseHelper {
 
   /// Get all todo items sorted by created_at or order_index
   Future<List<TodoItem>> getAllTodos({bool sortByOrder = false}) async {
-    final db = await database;
+    final options = TodoQueryOptions(
+      sortField: sortByOrder ? TodoSortField.manual : TodoSortField.createdAt,
+      direction: sortByOrder ? SortDirection.asc : SortDirection.desc,
+    );
 
-    final orderBy = sortByOrder
-        ? 'CASE WHEN order_index IS NULL THEN 1 ELSE 0 END, order_index ASC, created_at ASC'
-        : 'created_at DESC';
+    return getTodos(options);
+  }
+
+  /// Get todo items based on query options
+  Future<List<TodoItem>> getTodos(TodoQueryOptions options) async {
+    final db = await database;
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (options.onlyPending) {
+      whereClauses.add('status = ?');
+      whereArgs.add(TodoStatus.pending.value);
+    }
+
+    if (options.categoryId != null) {
+      whereClauses.add('category_id = ?');
+      whereArgs.add(options.categoryId);
+    }
+
+    final orderBy =
+        TodoQueryBuilder.buildOrderBy(options.sortField, options.direction);
+    final where = whereClauses.isEmpty ? null : whereClauses.join(' AND ');
 
     final maps = await db.query(
       'todo_item',
+      where: where,
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
       orderBy: orderBy,
     );
 
@@ -412,6 +451,20 @@ class DatabaseHelper {
     );
   }
 
+  /// Update the priority of a todo item
+  Future<int> updatePriority(String id, TodoPriority priority) async {
+    final db = await database;
+    return db.update(
+      'todo_item',
+      {
+        'priority': priority.value,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   /// Insert or replace a reminder row for a todo item
   Future<void> upsertReminder({
     required String reminderId,
@@ -512,6 +565,156 @@ class DatabaseHelper {
     );
 
     return maps.map((map) => TodoItem.fromJson(map)).toList();
+  }
+
+  /// Get todos by category
+  Future<List<TodoItem>> getTodosByCategory(String categoryId) async {
+    final db = await database;
+    final maps = await db.query(
+      'todo_item',
+      where: 'category_id = ? AND deleted_at IS NULL',
+      whereArgs: [categoryId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => TodoItem.fromJson(map)).toList();
+  }
+
+  /// Get todos by tag
+  Future<List<TodoItem>> getTodosByTag(String tagId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT t.*
+      FROM todo_item t
+      INNER JOIN todo_tags tt ON tt.todo_id = t.id
+      WHERE tt.tag_id = ? AND t.deleted_at IS NULL
+      ORDER BY t.created_at DESC
+    ''', [tagId]);
+    return maps.map((map) => TodoItem.fromJson(map)).toList();
+  }
+
+  /// Insert a category
+  Future<void> insertCategory(Category category) async {
+    final db = await database;
+    await db.insert(
+      'categories',
+      category.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Update a category
+  Future<int> updateCategoryData(Category category) async {
+    final db = await database;
+    return db.update(
+      'categories',
+      category.toJson(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+  /// Delete a category and clear references
+  Future<void> deleteCategory(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'todo_item',
+        {'category_id': null},
+        where: 'category_id = ?',
+        whereArgs: [id],
+      );
+
+      await txn.delete(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+  }
+
+  /// Get categories
+  Future<List<Category>> getCategories({bool includeHidden = false}) async {
+    final db = await database;
+    final maps = await db.query(
+      'categories',
+      where: includeHidden ? null : 'is_hidden = 0',
+      orderBy: 'sort_order ASC, name ASC',
+    );
+    return maps.map((map) => Category.fromJson(map)).toList();
+  }
+
+  /// Insert a tag
+  Future<void> insertTag(Tag tag) async {
+    final db = await database;
+    await db.insert(
+      'tags',
+      tag.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Update a tag
+  Future<int> updateTagData(Tag tag) async {
+    final db = await database;
+    return db.update(
+      'tags',
+      tag.toJson(),
+      where: 'id = ?',
+      whereArgs: [tag.id],
+    );
+  }
+
+  /// Delete a tag
+  Future<int> deleteTag(String id) async {
+    final db = await database;
+    return db.delete(
+      'tags',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Get tags
+  Future<List<Tag>> getTags() async {
+    final db = await database;
+    final maps = await db.query(
+      'tags',
+      orderBy: 'name ASC',
+    );
+    return maps.map((map) => Tag.fromJson(map)).toList();
+  }
+
+  /// Get tags for a todo
+  Future<List<Tag>> getTagsForTodo(String todoId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT tg.*
+      FROM tags tg
+      INNER JOIN todo_tags tt ON tt.tag_id = tg.id
+      WHERE tt.todo_id = ?
+      ORDER BY tg.name ASC
+    ''', [todoId]);
+    return maps.map((map) => Tag.fromJson(map)).toList();
+  }
+
+  /// Replace tags for a todo
+  Future<void> setTagsForTodo(String todoId, List<String> tagIds) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'todo_tags',
+        where: 'todo_id = ?',
+        whereArgs: [todoId],
+      );
+
+      for (final tagId in tagIds) {
+        await txn.insert(
+          'todo_tags',
+          {'todo_id': todoId, 'tag_id': tagId},
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    });
   }
 
   /// Close the database
