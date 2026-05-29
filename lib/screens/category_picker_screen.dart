@@ -4,6 +4,7 @@ import '../l10n/app_i18n.dart';
 import '../models/category.dart';
 import '../providers/app_providers.dart';
 import 'category_create_screen.dart';
+import '../utils/motion.dart';
 
 class CategoryPickerScreen extends ConsumerWidget {
   final String? selectedCategoryId;
@@ -37,85 +38,90 @@ class CategoryPickerScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(context.tr('category.chooseTitle')),
       ),
-      body: SafeArea(
-        child: categoriesAsync.when(
-          data: (categories) {
-            return Column(
-              children: [
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.05,
-                    ),
-                    itemCount: categories.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == categories.length) {
-                        return _CreateCategoryTile(
-                          onTap: () async {
-                            final created = await Navigator.push<Category>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CategoryCreateScreen(),
-                              ),
-                            );
-                            if (created != null && context.mounted) {
-                              ref.invalidate(categoryListProvider);
-                            }
-                          },
-                        );
-                      }
+      body: motionEntrance(
+        context,
+        SafeArea(
+          child: categoriesAsync.when(
+            data: (categories) {
+              return Column(
+                children: [
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.05,
+                      ),
+                      itemCount: categories.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == categories.length) {
+                          return _CreateCategoryTile(
+                            onTap: () async {
+                              final created = await Navigator.push<Category>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CategoryCreateScreen(),
+                                ),
+                              );
+                              if (created != null && context.mounted) {
+                                ref.invalidate(categoryListProvider);
+                              }
+                            },
+                          );
+                        }
 
-                      final category = categories[index];
-                      final isSelected = category.id == selectedCategoryId;
-                      return _CategoryTile(
-                        category: category,
-                        isSelected: isSelected,
-                        onTap: () => Navigator.pop(context, category.id),
-                        onLongPress: () => _showCategoryActions(
-                          context,
-                          ref,
-                          category,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final created = await Navigator.push<Category>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CategoryCreateScreen(),
+                        final category = categories[index];
+                        final isSelected = category.id == selectedCategoryId;
+                        return _CategoryTile(
+                          category: category,
+                          isSelected: isSelected,
+                          onTap: () => Navigator.pop(context, category.id),
+                          onLongPress: () => _showCategoryActions(
+                            context,
+                            ref,
+                            category,
                           ),
                         );
-                        if (created != null && context.mounted) {
-                          ref.invalidate(categoryListProvider);
-                        }
                       },
-                      child: Text(context.tr('category.addAction')),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Text(
-              error.toString(),
-              style: theme.textTheme.bodyMedium,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final created = await Navigator.push<Category>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CategoryCreateScreen(),
+                            ),
+                          );
+                          if (created != null && context.mounted) {
+                            ref.invalidate(categoryListProvider);
+                          }
+                        },
+                        child: Text(context.tr('category.addAction')),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Text(
+                error.toString(),
+                style: theme.textTheme.bodyMedium,
+              ),
             ),
           ),
         ),
+        duration: MotionTokens.page,
+        slideY: 0.04,
       ),
     );
   }

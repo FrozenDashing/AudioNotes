@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../providers/app_providers.dart';
+import '../utils/motion.dart';
 
 /// Widget for playing back audio recordings
 class AudioPlayerWidget extends ConsumerStatefulWidget {
@@ -64,6 +65,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Play/pause button with subtle scale/fade transition on state change
         IconButton(
           icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
           onPressed: () async {
@@ -75,7 +77,13 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
               await playbackService.play(widget.audioPath);
             }
           },
-        ),
+        )
+            .animate(target: isPlaying ? 1 : 0)
+            .scale(
+                begin: const Offset(0.96, 0.96),
+                end: const Offset(1, 1),
+                duration: MotionTokens.short)
+            .fade(duration: MotionTokens.micro),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 1.0),
@@ -92,7 +100,7 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
                       value: duration.inMilliseconds > 0
                           ? position.inMilliseconds / duration.inMilliseconds
                           : 0,
-                    ),
+                    ).animate().fade(duration: MotionTokens.micro),
                   ),
                 ),
               ],

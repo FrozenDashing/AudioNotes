@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
@@ -42,186 +43,194 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       isScrollControlled: true,
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.tr('home.sort.title'),
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  context.tr('home.sort.field'),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+        return motionEntrance(
+          ctx,
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('home.sort.title'),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
-                  ),
-                  child: RadioGroup<TodoSortField>(
-                    groupValue: selectedField,
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      selectedField = value;
-                      (ctx as Element).markNeedsBuild();
-                    },
-                    child: Column(
-                      children: [
-                        RadioListTile<TodoSortField>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title: Text(context.tr('settings.todo.sort.manual')),
-                          value: TodoSortField.manual,
-                        ),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                        RadioListTile<TodoSortField>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title:
-                              Text(context.tr('settings.todo.sort.createdAt')),
-                          value: TodoSortField.createdAt,
-                        ),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                        RadioListTile<TodoSortField>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title: Text(context.tr('settings.todo.sort.dueAt')),
-                          value: TodoSortField.dueAt,
-                        ),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                        RadioListTile<TodoSortField>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title:
-                              Text(context.tr('settings.todo.sort.priority')),
-                          value: TodoSortField.priority,
-                        ),
-                      ],
+                  const SizedBox(height: 6),
+                  Text(
+                    context.tr('home.sort.field'),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  context.tr('home.sort.direction'),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
-                  ),
-                  child: RadioGroup<SortDirection>(
-                    groupValue: selectedDirection,
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      selectedDirection = value;
-                      (ctx as Element).markNeedsBuild();
-                    },
-                    child: Column(
-                      children: [
-                        RadioListTile<SortDirection>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title: Text(context.tr('settings.todo.sort.asc')),
-                          value: SortDirection.asc,
-                        ),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                        RadioListTile<SortDirection>(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                          ),
-                          title: Text(context.tr('settings.todo.sort.desc')),
-                          value: SortDirection.desc,
-                        ),
-                      ],
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: theme.colorScheme.outlineVariant),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final navigator = Navigator.of(context);
-
-                          // persist settings
-                          await ref
-                              .read(settingsProvider.notifier)
-                              .setTodoSortField(selectedField);
-                          await ref
-                              .read(settingsProvider.notifier)
-                              .setTodoSortDirection(selectedDirection);
-
-                          // apply to list
-                          final options = TodoQueryOptions(
-                            sortField: selectedField,
-                            direction: selectedDirection,
-                          );
-                          navigator.pop();
-                          await ref
-                              .read(todoListProvider.notifier)
-                              .setQueryOptions(options);
-                        },
-                        child: Text(context.tr('home.sort.apply')),
+                    child: RadioGroup<TodoSortField>(
+                      groupValue: selectedField,
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        selectedField = value;
+                        (ctx as Element).markNeedsBuild();
+                      },
+                      child: Column(
+                        children: [
+                          RadioListTile<TodoSortField>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title:
+                                Text(context.tr('settings.todo.sort.manual')),
+                            value: TodoSortField.manual,
+                          ),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                          RadioListTile<TodoSortField>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title: Text(
+                                context.tr('settings.todo.sort.createdAt')),
+                            value: TodoSortField.createdAt,
+                          ),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                          RadioListTile<TodoSortField>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title: Text(context.tr('settings.todo.sort.dueAt')),
+                            value: TodoSortField.dueAt,
+                          ),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                          RadioListTile<TodoSortField>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title:
+                                Text(context.tr('settings.todo.sort.priority')),
+                            value: TodoSortField.priority,
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                )
-              ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.tr('home.sort.direction'),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: theme.colorScheme.outlineVariant),
+                    ),
+                    child: RadioGroup<SortDirection>(
+                      groupValue: selectedDirection,
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        selectedDirection = value;
+                        (ctx as Element).markNeedsBuild();
+                      },
+                      child: Column(
+                        children: [
+                          RadioListTile<SortDirection>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title: Text(context.tr('settings.todo.sort.asc')),
+                            value: SortDirection.asc,
+                          ),
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                          RadioListTile<SortDirection>(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            title: Text(context.tr('settings.todo.sort.desc')),
+                            value: SortDirection.desc,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final navigator = Navigator.of(context);
+
+                            // persist settings
+                            await ref
+                                .read(settingsProvider.notifier)
+                                .setTodoSortField(selectedField);
+                            await ref
+                                .read(settingsProvider.notifier)
+                                .setTodoSortDirection(selectedDirection);
+
+                            // apply to list
+                            final options = TodoQueryOptions(
+                              sortField: selectedField,
+                              direction: selectedDirection,
+                            );
+                            navigator.pop();
+                            await ref
+                                .read(todoListProvider.notifier)
+                                .setQueryOptions(options);
+                          },
+                          child: Text(context.tr('home.sort.apply')),
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
             ),
           ),
+          duration: MotionTokens.page,
+          slideY: 0.06,
         );
       },
     );
@@ -295,12 +304,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _ModelDownloadDialog(
-        modelManager: ref.read(modelManagerServiceProvider),
-        recognitionService: ref.read(recognitionServiceProvider),
-        onModelReady: () {
-          setState(() => _isModelReady = true);
-        },
+      builder: (context) => motionEntrance(
+        context,
+        _ModelDownloadDialog(
+          modelManager: ref.read(modelManagerServiceProvider),
+          recognitionService: ref.read(recognitionServiceProvider),
+          onModelReady: () {
+            setState(() => _isModelReady = true);
+          },
+        ),
+        duration: MotionTokens.page,
+        scaleBegin: 0.96,
       ),
     );
   }
@@ -653,7 +667,7 @@ class _RecordingOverlayWrapper extends ConsumerWidget {
 }
 
 /// Recording FAB wrapper - only rebuilds when recording state changes
-class _RecordingFAB extends ConsumerWidget {
+class _RecordingFAB extends ConsumerStatefulWidget {
   final bool isModelReady;
   final VoidCallback? onModelNotReady;
 
@@ -663,14 +677,55 @@ class _RecordingFAB extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RecordingFAB> createState() => _RecordingFABState();
+}
+
+class _RecordingFABState extends ConsumerState<_RecordingFAB>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(_) {
+    _scaleController.forward();
+    HapticFeedback.lightImpact();
+  }
+
+  void _onTapUp(_) {
+    _scaleController.reverse();
+  }
+
+  void _onTapCancel() {
+    _scaleController.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final recordingState = ref.watch(recordingStateProvider);
 
-    return FloatingActionButton.extended(
+    final fab = FloatingActionButton.extended(
       onPressed: _getOnPressed(recordingState, ref, context),
       label: Text(
         recordingState == RecordingState.idle
-            ? (isModelReady
+            ? (widget.isModelReady
                 ? context.tr('home.record.start')
                 : context.tr('home.model.downloadFirst'))
             : recordingState == RecordingState.recording
@@ -680,36 +735,51 @@ class _RecordingFAB extends ConsumerWidget {
       icon: Icon(
         recordingState == RecordingState.idle ? Icons.mic : Icons.stop,
       ),
-      backgroundColor: !isModelReady && recordingState == RecordingState.idle
-          ? Colors.orange
-          : recordingState == RecordingState.recording
-              ? Colors.red
-              : Theme.of(context).primaryColor,
+      backgroundColor:
+          !widget.isModelReady && recordingState == RecordingState.idle
+              ? Colors.orange
+              : recordingState == RecordingState.recording
+                  ? Colors.red
+                  : Theme.of(context).primaryColor,
+    );
+
+    // Tap-to-scale feedback on every press, no idle bounce
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: fab,
+      ),
     );
   }
 
   VoidCallback? _getOnPressed(
       RecordingState recordingState, WidgetRef ref, BuildContext context) {
     if (recordingState == RecordingState.idle) {
-      // Idle state: can start recording
       return () =>
           _startRecording(ref.read(recordingStateProvider.notifier), context);
     } else if (recordingState == RecordingState.recording) {
-      // Recording state: can stop recording
       return () => _stopRecording(ref.read(recordingStateProvider.notifier));
     }
-    // Processing state: disable button
     return null;
   }
 
   void _startRecording(RecordingNotifier notifier, BuildContext context) {
-    if (!isModelReady) {
-      // Call the callback to show download dialog
-      onModelNotReady?.call();
+    if (!widget.isModelReady) {
+      widget.onModelNotReady?.call();
       return;
     }
 
     // Async operation, but we don't await to keep UI responsive
+    _scaleController.reverse();
     notifier.start().catchError((error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -726,6 +796,7 @@ class _RecordingFAB extends ConsumerWidget {
   }
 
   void _stopRecording(RecordingNotifier notifier) {
+    _scaleController.reverse();
     // Async operation, but we don't await to keep UI responsive
     notifier.stop().catchError((error) {
       print('Stop recording error: $error');

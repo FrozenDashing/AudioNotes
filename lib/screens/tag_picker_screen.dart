@@ -4,6 +4,7 @@ import '../l10n/app_i18n.dart';
 import '../models/tag.dart';
 import '../providers/app_providers.dart';
 import 'tag_create_screen.dart';
+import '../utils/motion.dart';
 
 class TagPickerScreen extends ConsumerStatefulWidget {
   final List<String> initialSelected;
@@ -31,89 +32,94 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
       appBar: AppBar(
         title: Text(context.tr('tag.chooseTitle')),
       ),
-      body: tagsAsync.when(
-        data: (tags) {
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: tags.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    if (index == tags.length) {
-                      return ListTile(
-                        leading: const Icon(Icons.add),
-                        title: Text(context.tr('tag.createNewAction')),
-                        onTap: () async {
-                          final created = await Navigator.push<Tag?>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const TagCreateScreen(),
-                            ),
-                          );
-                          if (created != null && context.mounted) {
-                            ref.invalidate(tagListProvider);
-                            ref.invalidate(tagsForTodoProvider);
-                          }
-                        },
-                      );
-                    }
+      body: motionEntrance(
+        context,
+        tagsAsync.when(
+          data: (tags) {
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: tags.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      if (index == tags.length) {
+                        return ListTile(
+                          leading: const Icon(Icons.add),
+                          title: Text(context.tr('tag.createNewAction')),
+                          onTap: () async {
+                            final created = await Navigator.push<Tag?>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TagCreateScreen(),
+                              ),
+                            );
+                            if (created != null && context.mounted) {
+                              ref.invalidate(tagListProvider);
+                              ref.invalidate(tagsForTodoProvider);
+                            }
+                          },
+                        );
+                      }
 
-                    final tag = tags[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            tag.color != null ? Color(tag.color!) : null,
-                        child: const Icon(Icons.label, color: Colors.white),
-                      ),
-                      title: Text(tag.name),
-                      subtitle: Text(context.tr('tag.longPressHint')),
-                      onLongPress: () => _showTagActions(context, tag),
-                      trailing: Checkbox(
-                        value: _selected.contains(tag.id),
-                        onChanged: (v) {
+                      final tag = tags[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              tag.color != null ? Color(tag.color!) : null,
+                          child: const Icon(Icons.label, color: Colors.white),
+                        ),
+                        title: Text(tag.name),
+                        subtitle: Text(context.tr('tag.longPressHint')),
+                        onLongPress: () => _showTagActions(context, tag),
+                        trailing: Checkbox(
+                          value: _selected.contains(tag.id),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                _selected.add(tag.id);
+                              } else {
+                                _selected.remove(tag.id);
+                              }
+                            });
+                          },
+                        ),
+                        onTap: () {
                           setState(() {
-                            if (v == true) {
-                              _selected.add(tag.id);
-                            } else {
+                            if (_selected.contains(tag.id)) {
                               _selected.remove(tag.id);
+                            } else {
+                              _selected.add(tag.id);
                             }
                           });
                         },
-                      ),
-                      onTap: () {
-                        setState(() {
-                          if (_selected.contains(tag.id)) {
-                            _selected.remove(tag.id);
-                          } else {
-                            _selected.add(tag.id);
-                          }
-                        });
-                      },
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            Navigator.pop(context, _selected.toList()),
-                        child: Text(context.tr('tag.applySelection')),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              Navigator.pop(context, _selected.toList()),
+                          child: Text(context.tr('tag.applySelection')),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+                    ],
+                  ),
+                )
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text(e.toString())),
+        ),
+        duration: MotionTokens.page,
+        slideY: 0.04,
       ),
     );
   }

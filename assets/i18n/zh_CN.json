@@ -239,6 +239,12 @@
     "noAudioToPlay": "没有可播放的音频",
     "playbackFailed": "播放失败: {error}",
     "deleteDialogTitle": "删除笔记",
-    "deleteDialogContent": "确定要删除这条笔记吗？"
+    "deleteDialogContent": "确定要删除这条笔记吗？",
+    "overlay": {
+      "recording": "录音中...",
+      "processing": "处理中...",
+      "listening": "聆听中...",
+      "hint": "请对着麦克风清晰说话"
+    }
   }
 }

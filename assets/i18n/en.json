@@ -239,6 +239,12 @@
     "noAudioToPlay": "No audio to play",
     "playbackFailed": "Playback failed: {error}",
     "deleteDialogTitle": "Delete Note",
-    "deleteDialogContent": "Are you sure you want to delete this note?"
+    "deleteDialogContent": "Are you sure you want to delete this note?",
+    "overlay": {
+      "recording": "Recording...",
+      "processing": "Processing...",
+      "listening": "Listening...",
+      "hint": "Speak clearly into the microphone"
+    }
   }
 }
