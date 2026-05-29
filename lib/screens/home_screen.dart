@@ -15,6 +15,7 @@ import '../services/recognition_service.dart';
 import '../models/todo_sort.dart';
 import '../models/todo_query_options.dart';
 import '../providers/settings_provider.dart';
+import '../utils/motion.dart';
 
 enum _HomeMenuAction { sort, toggleSelection }
 
@@ -424,45 +425,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           // Model not ready overlay
           if (!_isModelReady && !_isCheckingModel)
-            Container(
-              color: Colors.black.withValues(alpha: 0.7),
-              child: Center(
-                child: Card(
-                  margin: const EdgeInsets.all(32),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.download_for_offline,
-                          size: 64,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.tr('home.model.notDownloadedTitle'),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+            motionEntrance(
+              context,
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: Center(
+                  child: Card(
+                    margin: const EdgeInsets.all(32),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.download_for_offline,
+                            size: 64,
+                            color: Colors.blue,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          context.tr('home.model.notDownloadedSubtitle'),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                          const SizedBox(height: 16),
+                          Text(
+                            context.tr('home.model.notDownloadedTitle'),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _showModelDownloadDialog,
-                          icon: const Icon(Icons.download),
-                          label: Text(context.tr('home.model.downloadPack')),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            context.tr('home.model.notDownloadedSubtitle'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _showModelDownloadDialog,
+                            icon: const Icon(Icons.download),
+                            label: Text(context.tr('home.model.downloadPack')),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -554,35 +558,40 @@ class _TodoListContent extends ConsumerWidget {
           builder: (context, ref, _) {
             final group = ref.watch(todoGroupProvider(key));
             if (group == null) return const SizedBox.shrink();
-            return TodoGroupSection(
-              key: ValueKey(group.groupKey),
-              group: group,
-              groupIndex: index,
-              isManualSortEnabled: isManualSortEnabled,
-              onMoveItemToGroup: (
-                todoId,
-                targetCategoryId,
-                targetIndex, {
-                sourceGroupKey,
-                sourceIndex,
-              }) async {
-                await ref
-                    .read(todoListProvider.notifier)
-                    .moveTodoToCategoryAtIndex(
-                      todoId,
-                      targetCategoryId,
-                      targetIndex,
-                      sourceGroupKey: sourceGroupKey,
-                      sourceIndex: sourceIndex,
-                    );
-              },
-              onReorderWithinGroup: (oldIndex, newIndex) async {
-                await ref.read(todoListProvider.notifier).reorderTodosInGroup(
-                      group.items,
-                      oldIndex,
-                      newIndex,
-                    );
-              },
+            return motionEntrance(
+              context,
+              TodoGroupSection(
+                key: ValueKey(group.groupKey),
+                group: group,
+                groupIndex: index,
+                isManualSortEnabled: isManualSortEnabled,
+                onMoveItemToGroup: (
+                  todoId,
+                  targetCategoryId,
+                  targetIndex, {
+                  sourceGroupKey,
+                  sourceIndex,
+                }) async {
+                  await ref
+                      .read(todoListProvider.notifier)
+                      .moveTodoToCategoryAtIndex(
+                        todoId,
+                        targetCategoryId,
+                        targetIndex,
+                        sourceGroupKey: sourceGroupKey,
+                        sourceIndex: sourceIndex,
+                      );
+                },
+                onReorderWithinGroup: (oldIndex, newIndex) async {
+                  await ref.read(todoListProvider.notifier).reorderTodosInGroup(
+                        group.items,
+                        oldIndex,
+                        newIndex,
+                      );
+                },
+              ),
+              duration: MotionTokens.page,
+              slideY: 0.03,
             );
           },
         );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
+import '../utils/motion.dart';
 
 /// Floating action toolbar for batch operations on todos
 class FloatingActionToolbar extends ConsumerWidget {
@@ -22,40 +23,43 @@ class FloatingActionToolbar extends ConsumerWidget {
     return Positioned(
       left: 16,
       bottom: 16,
-      child: Card(
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (hasCompletedTodos)
-                IconButton(
-                  icon: const Icon(Icons.cleaning_services),
-                  tooltip: context.tr('toolbar.clearCompletedTooltip'),
-                  onPressed: () => _confirmDeleteAllCompleted(context, ref),
-                  color: Colors.orange,
-                ),
-              if (hasSelectedTodos) ...[
-                const VerticalDivider(width: 1),
-                IconButton(
-                  icon: const Icon(Icons.check),
-                  tooltip: context.tr('toolbar.completeSelectedTooltip'),
-                  onPressed: () => _completeSelected(context, ref),
-                  color: Colors.green,
-                ),
-                const VerticalDivider(width: 1),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: context.tr('toolbar.deleteSelectedTooltip'),
-                  onPressed: () => _confirmDeleteSelected(context, ref),
-                  color: Colors.red,
-                ),
+      child: motionEntrance(
+        context,
+        Card(
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasCompletedTodos)
+                  IconButton(
+                    icon: const Icon(Icons.cleaning_services),
+                    tooltip: context.tr('toolbar.clearCompletedTooltip'),
+                    onPressed: () => _confirmDeleteAllCompleted(context, ref),
+                    color: Colors.orange,
+                  ),
+                if (hasSelectedTodos) ...[
+                  const VerticalDivider(width: 1),
+                  IconButton(
+                    icon: const Icon(Icons.check),
+                    tooltip: context.tr('toolbar.completeSelectedTooltip'),
+                    onPressed: () => _completeSelected(context, ref),
+                    color: Colors.green,
+                  ),
+                  const VerticalDivider(width: 1),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    tooltip: context.tr('toolbar.deleteSelectedTooltip'),
+                    onPressed: () => _confirmDeleteSelected(context, ref),
+                    color: Colors.red,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -65,31 +69,34 @@ class FloatingActionToolbar extends ConsumerWidget {
   void _confirmDeleteAllCompleted(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.tr('toolbar.clearCompletedTitle')),
-        content: Text(context.tr('toolbar.clearCompletedContent')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('common.cancel')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+      builder: (dialogContext) => motionEntrance(
+        dialogContext,
+        AlertDialog(
+          title: Text(context.tr('toolbar.clearCompletedTitle')),
+          content: Text(context.tr('toolbar.clearCompletedContent')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.tr('common.cancel')),
             ),
-            onPressed: () async {
-              await ref.read(todoListProvider.notifier).deleteAllCompleted();
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(context.tr('toolbar.clearedCompleted'))),
-                );
-              }
-            },
-            child: Text(context.tr('toolbar.clearAction')),
-          ),
-        ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+              ),
+              onPressed: () async {
+                await ref.read(todoListProvider.notifier).deleteAllCompleted();
+                if (context.mounted) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(context.tr('toolbar.clearedCompleted'))),
+                  );
+                }
+              },
+              child: Text(context.tr('toolbar.clearAction')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -121,36 +128,39 @@ class FloatingActionToolbar extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.tr('toolbar.deleteSelectedTitle')),
-        content: Text(context.tr('toolbar.deleteSelectedContent',
-            params: {'count': '${selectedIds.length}'})),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('common.cancel')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+      builder: (dialogContext) => motionEntrance(
+        dialogContext,
+        AlertDialog(
+          title: Text(context.tr('toolbar.deleteSelectedTitle')),
+          content: Text(context.tr('toolbar.deleteSelectedContent',
+              params: {'count': '${selectedIds.length}'})),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.tr('common.cancel')),
             ),
-            onPressed: () async {
-              await ref
-                  .read(todoListProvider.notifier)
-                  .deleteTodos(selectedIds);
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(context.tr('toolbar.deletedCount',
-                        params: {'count': '${selectedIds.length}'})),
-                  ),
-                );
-              }
-            },
-            child: Text(context.tr('common.delete')),
-          ),
-        ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              onPressed: () async {
+                await ref
+                    .read(todoListProvider.notifier)
+                    .deleteTodos(selectedIds);
+                if (context.mounted) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr('toolbar.deletedCount',
+                          params: {'count': '${selectedIds.length}'})),
+                    ),
+                  );
+                }
+              },
+              child: Text(context.tr('common.delete')),
+            ),
+          ],
+        ),
       ),
     );
   }

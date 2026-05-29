@@ -8,6 +8,7 @@ import '../models/model_metadata.dart';
 import '../repositories/model_repository.dart';
 import '../services/model_manager_service.dart';
 import '../providers/app_providers.dart';
+import '../utils/motion.dart';
 
 /// Screen for selecting and managing speech recognition models
 class ModelSelectionScreen extends ConsumerStatefulWidget {
@@ -68,11 +69,16 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
             itemCount: models.length,
             itemBuilder: (context, index) {
               final model = models[index];
-              return ModelCard(
-                model: model,
-                onDownload: () => _handleDownload(model),
-                onDelete: () => _handleDelete(model),
-                onSelect: () => _handleSelect(model),
+              return motionEntrance(
+                context,
+                ModelCard(
+                  model: model,
+                  onDownload: () => _handleDownload(model),
+                  onDelete: () => _handleDelete(model),
+                  onSelect: () => _handleSelect(model),
+                ),
+                duration: MotionTokens.page,
+                slideY: 0.03,
               );
             },
           );
@@ -140,33 +146,37 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
         startDownload();
 
         return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: Text('${context.tr('model.downloadModel')}: ${model.name}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: LinearProgressIndicator(value: progress),
+          return motionEntrance(
+            context,
+            AlertDialog(
+              title:
+                  Text('${context.tr('model.downloadModel')}: ${model.name}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: LinearProgressIndicator(value: progress),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${(progress * 100).toStringAsFixed(0)}%'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    // Cancel download
+                    await sub?.cancel();
+                    // Attempt to clean up partial files
+                    try {
+                      await manager.deleteModel(model.modelId);
+                    } catch (_) {}
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: Text(context.tr('common.cancel')),
                 ),
-                const SizedBox(height: 8),
-                Text('${(progress * 100).toStringAsFixed(0)}%'),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  // Cancel download
-                  await sub?.cancel();
-                  // Attempt to clean up partial files
-                  try {
-                    await manager.deleteModel(model.modelId);
-                  } catch (_) {}
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: Text(context.tr('common.cancel')),
-              ),
-            ],
           );
         });
       },
@@ -176,39 +186,44 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
   void _handleDelete(ModelMetadata model) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.tr('model.deleteModel')),
-        content: Text(context.tr('model.deleteModelConfirm')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('common.cancel')),
-          ),
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-              final repo = ModelRepository();
-              await repo.deleteModel(model.modelId);
-              final settingsNotifier = ref.read(settingsProvider.notifier);
-              if (ref.read(settingsProvider).currentModelId == model.modelId) {
-                await settingsNotifier.setCurrentModelId('auto');
-                await settingsNotifier.setAutoModelSelect(true);
-              }
+      builder: (dialogContext) => motionEntrance(
+        dialogContext,
+        AlertDialog(
+          title: Text(context.tr('model.deleteModel')),
+          content: Text(context.tr('model.deleteModelConfirm')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.tr('common.cancel')),
+            ),
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(context);
+                final deletedMessage = context.tr('model.modelDeleted');
+                final repo = ModelRepository();
+                await repo.deleteModel(model.modelId);
+                final settingsNotifier = ref.read(settingsProvider.notifier);
+                if (ref.read(settingsProvider).currentModelId ==
+                    model.modelId) {
+                  await settingsNotifier.setCurrentModelId('auto');
+                  await settingsNotifier.setAutoModelSelect(true);
+                }
 
-              // Refresh the list
-              setState(() {
-                _modelsFuture = _loadModels();
-              });
+                // Refresh the list
+                setState(() {
+                  _modelsFuture = _loadModels();
+                });
 
-              navigator.pop();
-              messenger.showSnackBar(
-                SnackBar(content: Text(context.tr('model.modelDeleted'))),
-              );
-            },
-            child: Text(context.tr('common.delete')),
-          ),
-        ],
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(content: Text(deletedMessage)),
+                );
+              },
+              child: Text(context.tr('common.delete')),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -40,11 +40,7 @@ class RecognitionPlugin : FlutterPlugin, MethodCallHandler {
         channel = MethodChannel(binding.binaryMessenger, "com.audionotes/recognition")
         channel.setMethodCallHandler(this)
         context = binding.applicationContext
-        
-        // Load model asynchronously on startup
-        Thread {
-            initializeVosk()
-        }.start()
+        // Do not initialize Vosk at startup; defer to explicit reloadModel or user's action.
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -162,11 +158,11 @@ class RecognitionPlugin : FlutterPlugin, MethodCallHandler {
                         result.error("MODEL_NOT_FOUND", "Model not found", null)
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to reload model", e)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to reload model", t)
                 isModelLoaded = false
                 handler.post {
-                    result.error("RELOAD_FAILED", e.message, null)
+                    result.error("RELOAD_FAILED", t.message, null)
                 }
             }
         }
@@ -175,9 +171,9 @@ class RecognitionPlugin : FlutterPlugin, MethodCallHandler {
     private fun initializeVosk() {
         try {
             Log.d(TAG, "Initializing Vosk model...")
-            
+
             LibVosk.setLogLevel(LogLevel.WARNINGS)
-            
+
             val modelPath = getModelPath()
             if (modelPath != null) {
                 model = Model(modelPath)
@@ -187,8 +183,9 @@ class RecognitionPlugin : FlutterPlugin, MethodCallHandler {
                 Log.e(TAG, "Vosk model not found!")
                 isModelLoaded = false
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load Vosk model", e)
+        } catch (t: Throwable) {
+            // Catch Throwable to avoid native Errors like UnsatisfiedLinkError crashing the app
+            Log.e(TAG, "Failed to load Vosk model (caught Throwable)", t)
             isModelLoaded = false
         }
     }
@@ -246,8 +243,8 @@ class RecognitionPlugin : FlutterPlugin, MethodCallHandler {
             model?.close()
             model = null
             isModelLoaded = false
-        } catch (e: Exception) {
-            Log.e(TAG, "Error closing model", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error closing model", t)
         }
     }
 }

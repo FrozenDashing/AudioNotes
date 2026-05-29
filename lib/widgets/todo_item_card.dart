@@ -7,6 +7,7 @@ import '../models/todo_priority.dart';
 import '../providers/app_providers.dart';
 import '../screens/category_picker_screen.dart';
 import '../screens/tag_picker_screen.dart';
+import '../utils/motion.dart';
 import 'completed_text.dart';
 
 /// Individual todo item card widget
@@ -68,7 +69,13 @@ class TodoItemCard extends ConsumerWidget {
           )
         : card;
 
-    return visualCard;
+    return motionEntrance(
+      context,
+      visualCard,
+      duration: isRecognizing ? MotionTokens.medium : MotionTokens.page,
+      slideY: isRecognizing ? 0.02 : 0.04,
+      includeScale: !isRecognizing,
+    );
   }
 
   Widget _buildCard(
@@ -450,105 +457,108 @@ class TodoItemCard extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: Text(context.tr('todo.editAction')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showEditDialog(context, notifier, todo);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.category_outlined),
-                title: Text(context.tr('todo.setCategory')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _openCategoryPicker(context, ref, notifier, todo);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.notifications_active_outlined),
-                title: Text(context.tr('todo.setReminderTime')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _pickReminderTime(context, notifier, todo);
-                },
-              ),
-              if (todo.remindAt != null)
+      builder: (sheetContext) => motionEntrance(
+        sheetContext,
+        SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 ListTile(
-                  leading: const Icon(Icons.notifications_off_outlined),
-                  title: Text(context.tr('todo.clearReminderTime')),
+                  leading: const Icon(Icons.edit),
+                  title: Text(context.tr('todo.editAction')),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _clearReminderTime(context, notifier, todo);
+                    _showEditDialog(context, notifier, todo);
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.event_outlined),
-                title: Text(context.tr('todo.setDueTime')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _pickDueTime(context, notifier, todo);
-                },
-              ),
-              if (todo.dueAt != null)
                 ListTile(
-                  leading: const Icon(Icons.event_busy_outlined),
-                  title: Text(context.tr('todo.clearDueTime')),
+                  leading: const Icon(Icons.category_outlined),
+                  title: Text(context.tr('todo.setCategory')),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _clearDueTime(context, notifier, todo);
+                    _openCategoryPicker(context, ref, notifier, todo);
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.flag),
-                title: Text(context.tr('todo.setPriority')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _showPriorityPicker(context, notifier, todo);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.label_outline),
-                title: Text(context.tr('todo.editTags')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _openTagPicker(context, ref, notifier, todo);
-                },
-              ),
-              if (!isCompleted)
                 ListTile(
-                  leading: const Icon(Icons.mic),
-                  title: Text(context.tr('todo.reRecordAction')),
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: Text(context.tr('todo.setReminderTime')),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _reRecord(context, ref, todo);
+                    _pickReminderTime(context, notifier, todo);
                   },
                 ),
-              if (hasAudio)
+                if (todo.remindAt != null)
+                  ListTile(
+                    leading: const Icon(Icons.notifications_off_outlined),
+                    title: Text(context.tr('todo.clearReminderTime')),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _clearReminderTime(context, notifier, todo);
+                    },
+                  ),
                 ListTile(
-                  leading: const Icon(Icons.play_arrow),
-                  title: Text(context.tr('todo.playbackAction')),
+                  leading: const Icon(Icons.event_outlined),
+                  title: Text(context.tr('todo.setDueTime')),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _playback(context, ref, todo);
+                    _pickDueTime(context, notifier, todo);
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: Text(context.tr('common.delete'),
-                    style: const TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _confirmDelete(context, notifier, todo);
-                },
-              ),
-            ],
+                if (todo.dueAt != null)
+                  ListTile(
+                    leading: const Icon(Icons.event_busy_outlined),
+                    title: Text(context.tr('todo.clearDueTime')),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _clearDueTime(context, notifier, todo);
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.flag),
+                  title: Text(context.tr('todo.setPriority')),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showPriorityPicker(context, notifier, todo);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.label_outline),
+                  title: Text(context.tr('todo.editTags')),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openTagPicker(context, ref, notifier, todo);
+                  },
+                ),
+                if (!isCompleted)
+                  ListTile(
+                    leading: const Icon(Icons.mic),
+                    title: Text(context.tr('todo.reRecordAction')),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _reRecord(context, ref, todo);
+                    },
+                  ),
+                if (hasAudio)
+                  ListTile(
+                    leading: const Icon(Icons.play_arrow),
+                    title: Text(context.tr('todo.playbackAction')),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _playback(context, ref, todo);
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: Text(context.tr('common.delete'),
+                      style: const TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _confirmDelete(context, notifier, todo);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -563,15 +573,18 @@ class TodoItemCard extends ConsumerWidget {
     final picked = await showModalBottomSheet<TodoPriority>(
       context: context,
       builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: TodoPriority.values.map((p) {
-              return ListTile(
-                title: Text(_priorityToLabel(context, p)),
-                onTap: () => Navigator.pop(ctx, p),
-              );
-            }).toList(),
+        return motionEntrance(
+          ctx,
+          SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: TodoPriority.values.map((p) {
+                return ListTile(
+                  title: Text(_priorityToLabel(context, p)),
+                  onTap: () => Navigator.pop(ctx, p),
+                );
+              }).toList(),
+            ),
           ),
         );
       },
@@ -735,31 +748,34 @@ class TodoItemCard extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.tr('todo.editDialogTitle')),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: InputDecoration(
-            hintText: context.tr('todo.editDialogHint'),
+      builder: (dialogContext) => motionEntrance(
+        dialogContext,
+        AlertDialog(
+          title: Text(context.tr('todo.editDialogTitle')),
+          content: TextField(
+            controller: controller,
+            maxLines: 5,
+            decoration: InputDecoration(
+              hintText: context.tr('todo.editDialogHint'),
+            ),
+            autofocus: true,
           ),
-          autofocus: true,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.tr('common.cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (controller.text.trim().isEmpty) return;
+                final navigator = Navigator.of(dialogContext);
+                await notifier.updateText(todo.id, controller.text.trim());
+                navigator.pop();
+              },
+              child: Text(context.tr('common.save')),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.tr('common.cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              final navigator = Navigator.of(dialogContext);
-              await notifier.updateText(todo.id, controller.text.trim());
-              navigator.pop();
-            },
-            child: Text(context.tr('common.save')),
-          ),
-        ],
       ),
     );
   }
@@ -839,27 +855,30 @@ class TodoItemCard extends ConsumerWidget {
       BuildContext context, TodoListNotifier notifier, TodoItem todo) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.tr('todo.deleteDialogTitle')),
-        content: Text(context.tr('todo.deleteDialogContent')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.tr('common.cancel')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+      builder: (dialogContext) => motionEntrance(
+        dialogContext,
+        AlertDialog(
+          title: Text(context.tr('todo.deleteDialogTitle')),
+          content: Text(context.tr('todo.deleteDialogContent')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.tr('common.cancel')),
             ),
-            onPressed: () async {
-              await notifier.deleteTodo(todo.id);
-              if (context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: Text(context.tr('common.delete')),
-          ),
-        ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              onPressed: () async {
+                await notifier.deleteTodo(todo.id);
+                if (context.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: Text(context.tr('common.delete')),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../providers/settings_provider.dart';
+import '../utils/motion.dart';
 import 'settings/appearance_settings_screen.dart';
 import 'settings/general_settings_screen.dart';
 import 'settings/todo_settings_screen.dart';
@@ -32,77 +33,98 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _SettingsHubCard(
-            icon: Icons.tune_outlined,
-            accentColor: Theme.of(context).colorScheme.primary,
-            title: context.tr('settings.section.general'),
-            subtitle:
-                '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)}',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const GeneralSettingsScreen(),
-                ),
-              );
-            },
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.tune_outlined,
+              accentColor: Theme.of(context).colorScheme.primary,
+              title: context.tr('settings.section.general'),
+              subtitle:
+                  '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)}',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const GeneralSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
           ),
           const SizedBox(height: 12),
-          _SettingsHubCard(
-            icon: Icons.palette_outlined,
-            accentColor: Theme.of(context).colorScheme.primary,
-            title: context.tr('settings.section.appearance'),
-            subtitle:
-                '${context.tr('settings.summary.fontSize')}：${_fontSizeLabel(context, settings.fontSizeOption)} · ${context.tr('settings.summary.theme')}：${_themeModeLabel(context, settings.themeMode)}',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AppearanceSettingsScreen(),
-                ),
-              );
-            },
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.palette_outlined,
+              accentColor: Theme.of(context).colorScheme.primary,
+              title: context.tr('settings.section.appearance'),
+              subtitle:
+                  '${context.tr('settings.summary.fontSize')}：${_fontSizeLabel(context, settings.fontSizeOption)} · ${context.tr('settings.summary.theme')}：${_themeModeLabel(context, settings.themeMode)}',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AppearanceSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
           ),
           const SizedBox(height: 12),
-          _SettingsHubCard(
-            icon: Icons.checklist_outlined,
-            accentColor: Theme.of(context).colorScheme.secondary,
-            title: context.tr('settings.section.todo'),
-            subtitle:
-                '${context.tr('settings.summary.defaultPriority')}：${_priorityLabel(context, settings.defaultTodoPriority)} · ${context.tr('settings.summary.completedAggregation')}：${settings.aggregateCompletedTodos ? context.tr('common.enabled') : context.tr('common.disabled')} · ${context.tr('settings.summary.sort')}：${_sortSummary(context, settings)}',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const TodoSettingsScreen(),
-                ),
-              );
-            },
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.checklist_outlined,
+              accentColor: Theme.of(context).colorScheme.secondary,
+              title: context.tr('settings.section.todo'),
+              subtitle:
+                  '${context.tr('settings.summary.defaultPriority')}：${_priorityLabel(context, settings.defaultTodoPriority)} · ${context.tr('settings.summary.completedAggregation')}：${settings.aggregateCompletedTodos ? context.tr('common.enabled') : context.tr('common.disabled')} · ${context.tr('settings.summary.sort')}：${_sortSummary(context, settings)}',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TodoSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
           ),
           const SizedBox(height: 12),
-          _SettingsHubCard(
-            icon: Icons.graphic_eq_outlined,
-            accentColor: Theme.of(context).colorScheme.tertiary,
-            title: context.tr('settings.section.voice'),
-            subtitle: settings.autoModelSelect
-                ? '${context.tr('settings.summary.model')}：${context.tr('settings.summary.autoSelect')} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}'
-                : '${context.tr('settings.summary.model')}：${settings.currentModelId} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const VoiceSettingsScreen(),
-                ),
-              );
-            },
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.graphic_eq_outlined,
+              accentColor: Theme.of(context).colorScheme.tertiary,
+              title: context.tr('settings.section.voice'),
+              subtitle: settings.autoModelSelect
+                  ? '${context.tr('settings.summary.model')}：${context.tr('settings.summary.autoSelect')} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}'
+                  : '${context.tr('settings.summary.model')}：${settings.currentModelId} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VoiceSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
           ),
           const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () {
-              ref.read(settingsProvider.notifier).resetToDefaults();
-            },
-            icon: const Icon(Icons.restart_alt),
-            label: Text(context.tr('settings.restoreDefaults')),
+          motionEntrance(
+            context,
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(settingsProvider.notifier).resetToDefaults();
+              },
+              icon: const Icon(Icons.restart_alt),
+              label: Text(context.tr('settings.restoreDefaults')),
+            ),
+            duration: MotionTokens.short,
+            slideY: 0.02,
           ),
         ],
       ),
@@ -189,53 +211,56 @@ class _SettingsHubCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+    return motionEntrance(
+      context,
+      Card(
+        elevation: 0,
+        color: theme.colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: accentColor),
                 ),
-                child: Icon(icon, color: accentColor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
         ),
       ),
