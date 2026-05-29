@@ -6,11 +6,14 @@ import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../providers/settings_provider.dart';
+import '../sync/providers/sync_provider.dart';
+import '../sync/coordinator/sync_coordinator.dart';
 import '../utils/motion.dart';
 import 'settings/appearance_settings_screen.dart';
 import 'settings/general_settings_screen.dart';
 import 'settings/todo_settings_screen.dart';
 import 'settings/voice_settings_screen.dart';
+import 'sync/webdav_settings_screen.dart';
 
 /// Settings hub screen.
 ///
@@ -113,6 +116,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
             duration: MotionTokens.page,
           ),
+          const SizedBox(height: 12),
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.cloud_outlined,
+              accentColor: Theme.of(context).colorScheme.primary,
+              title: context.tr('settings.section.sync'),
+              subtitle: _syncSummary(context, ref),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const WebDavSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
+          ),
           const SizedBox(height: 24),
           motionEntrance(
             context,
@@ -189,6 +211,21 @@ class SettingsScreen extends ConsumerWidget {
       SortDirection.desc => context.tr('settings.todo.sort.desc'),
     };
     return '$field / $direction';
+  }
+
+  String _syncSummary(BuildContext context, WidgetRef ref) {
+    final syncState = ref.watch(syncProvider);
+    if (!syncState.isConfigured) {
+      return '${context.tr('settings.summary.syncStatus')}：${context.tr('common.disabled')}';
+    }
+    final statusStr = switch (syncState.status) {
+      SyncStatus.idle => context.tr('common.enabled'),
+      SyncStatus.syncing => context.tr('settings.sync.syncing'),
+      SyncStatus.success => context.tr('settings.sync.success'),
+      SyncStatus.error => context.tr('settings.sync.failed'),
+      SyncStatus.conflict => context.tr('settings.sync.conflict.manual'),
+    };
+    return '${context.tr('settings.summary.syncStatus')}：$statusStr';
   }
 }
 

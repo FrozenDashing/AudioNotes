@@ -69,11 +69,26 @@
 
 | # | 功能 | 状态 | 说明 |
 |---|------|------|------|
-| 35 | SQLite 数据库 | ✅ 完成 | 5 张表 + 8 个索引，版本迁移至 v5 |
-| 36 | 数据库迁移 | ✅ 完成 | _upgradeDB 逐版本增量迁移 |
-| 37 | Clean Architecture | ✅ 完成 | data / domain / services / providers / screens / widgets 分层 |
+| 35 | SQLite 数据库 | ✅ 完成 | 5 张表 + 8 个索引 + 2 张同步表，版本迁移至 v6 |
+| 36 | 数据库迁移 | ✅ 完成 | _upgradeDB 逐版本增量迁移（含 v6 同步表） |
+| 37 | Clean Architecture | ✅ 完成 | data / domain / services / providers / screens / widgets / sync 分层 |
 | 38 | Riverpod 状态管理 | ✅ 完成 | 全局 providers，AsyncNotifier/Notifier 模式 |
 | 39 | 原生平台通道 | ✅ 完成 | ASR/Recorder/Recognition 三个 MethodChannel |
+
+### 云端同步
+
+| # | 功能 | 状态 | 说明 |
+|---|------|------|------|
+| 39a | WebDAV 客户端封装 | ✅ 完成 | WebDavClientWrapper 封装 webdav_client，支持配置/重置/上传/下载/测试连接 |
+| 39b | 同步 DTO 与序列化 | ✅ 完成 | TodoSyncDto / CategorySyncDto / TagSyncDto / ReminderSyncDto + SyncSerializer |
+| 39c | 远程存储 | ✅ 完成 | WebDavRemoteStore 管理 WebDAV 上的 JSON 文件（todos/categories/tags/reminders/manifest） |
+| 39d | 同步计划器 | ✅ 完成 | SyncPlanner 对比本地/远端/基线哈希，生成同步动作（上传/下载/冲突/删除） |
+| 39e | 同步协调器 | ✅ 完成 | SyncCoordinator 编排完整同步流程：加载数据→计划→执行→合并→更新基线→保存清单 |
+| 39f | 同步设置持久化 | ✅ 完成 | WebDavSettingsService + FlutterSecureStorage 安全存储凭据 |
+| 39g | 同步状态管理 | ✅ 完成 | SyncNotifier + SyncState，支持自动同步/启动同步/冲突策略 |
+| 39h | WebDAV 设置界面 | ✅ 完成 | 连接配置/测试/同步/断开/自动同步/冲突策略 UI |
+| 39i | 设置中心入口 | ✅ 完成 | settings_screen.dart 新增云同步 Hub 卡片 |
+| 39j | 同步 i18n | ✅ 完成 | en.json / zh_CN.json 完整中英文翻译 |
 
 ---
 
@@ -93,7 +108,7 @@
 
 | # | 功能 | 优先级 | 说明 |
 |---|------|--------|------|
-| 45 | 数据导出/备份 | P2 | 无法导出 Todo 数据或音频文件，无备份恢复机制 |
+| 45 | 数据导出/备份 | 🚧 部分 | WebDAV 云同步已实现基础同步（Todo/分类/标签/提醒），支持中文文本 UTF-8 编码，但音频文件同步和本地导出功能未实现 |
 | 46 | 搜索功能 | P1 | 缺少全文搜索，无法快速查找特定 Todo |
 | 47 | 统计面板 | P3 | 无完成率、识别准确率等数据统计视图 |
 | 48 | 锁屏/后台录音 | P2 | 当前仅支持前台录音，无法在锁屏或后台持续录制 |

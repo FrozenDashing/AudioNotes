@@ -22,7 +22,8 @@
       "general": "General",
       "appearance": "Appearance",
       "todo": "Todos",
-      "voice": "Voice"
+      "voice": "Voice",
+      "sync": "Sync"
     },
     "general": {
       "title": "General Settings",
@@ -86,7 +87,51 @@
       "sort": "Sort",
       "model": "Model",
       "trailingPeriodRemoval": "Trailing period removal",
-      "autoSelect": "Auto"
+      "autoSelect": "Auto",
+      "syncStatus": "Sync"
+    },
+    "sync": {
+      "title": "Cloud Sync",
+      "connection": "WebDAV Connection",
+      "url": "Server URL",
+      "username": "Username",
+      "password": "Password",
+      "remoteDir": "Remote Directory",
+      "urlRequired": "URL is required",
+      "urlInvalid": "URL must start with http",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required",
+      "testConnection": "Test",
+      "saveConfig": "Save",
+      "connectionSuccess": "Connection successful",
+      "connectionFailed": "Connection failed",
+      "configSaved": "Configuration saved",
+      "configSaveFailed": "Failed to save configuration",
+      "syncActions": "Sync Actions",
+      "syncNow": "Sync Now",
+      "syncing": "Syncing...",
+      "syncComplete": "Sync complete",
+      "syncFailed": "Sync failed",
+      "success": "Success",
+      "failed": "Failed",
+      "lastSync": "Last sync",
+      "result": "Result",
+      "disconnect": "Disconnect",
+      "disconnectConfirm": "Disconnect WebDAV? Local data will be preserved.",
+      "syncSettings": "Sync Settings",
+      "autoSync": "Auto Sync",
+      "autoSyncSubtitle": "Periodically sync data with the cloud",
+      "syncOnStartup": "Sync on Startup",
+      "syncOnStartupSubtitle": "Automatically sync when app starts",
+      "interval": "Sync Interval",
+      "minutes": "min",
+      "conflictStrategy": "Conflict Strategy",
+      "conflict": {
+        "localWins": "Local wins",
+        "remoteWins": "Remote wins",
+        "latestModified": "Latest modified",
+        "manual": "Manual resolve"
+      }
     }
   },
   "themePicker": {
