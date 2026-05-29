@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_i18n.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/font_size_slider.dart';
 import '../../widgets/theme_color_picker.dart';
@@ -15,7 +16,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('外观设置'),
+        title: Text(context.tr('settings.section.appearance')),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -31,7 +32,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '主题色',
+                    context.tr('settings.appearance.themeColor'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -65,7 +66,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '字号',
+                    context.tr('settings.appearance.fontSize'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),

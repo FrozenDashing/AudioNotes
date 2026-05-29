@@ -1,6 +1,8 @@
 import '../data/reminder_repository.dart';
 import '../data/todo_repository.dart';
+import '../l10n/locale_text_lookup.dart';
 import '../models/todo_item.dart';
+import '../repositories/settings_repository.dart';
 import 'notification_service.dart';
 
 class ReminderService {
@@ -8,13 +10,16 @@ class ReminderService {
     required ReminderRepository reminderRepository,
     required TodoRepository todoRepository,
     required NotificationService notificationService,
+    required SettingsRepository settingsRepository,
   })  : _reminderRepository = reminderRepository,
         _todoRepository = todoRepository,
-        _notificationService = notificationService;
+        _notificationService = notificationService,
+        _settingsRepository = settingsRepository;
 
   final ReminderRepository _reminderRepository;
   final TodoRepository _todoRepository;
   final NotificationService _notificationService;
+  final SettingsRepository _settingsRepository;
 
   Future<void> initialize() async {
     await _notificationService.initialize();
@@ -22,6 +27,7 @@ class ReminderService {
   }
 
   Future<void> syncPendingReminders() async {
+    final languageCode = await _getLanguageCode();
     final reminders = await _reminderRepository.getAllReminders();
     for (final reminder in reminders) {
       final todoId = reminder['todo_id'] as String?;
@@ -42,11 +48,16 @@ class ReminderService {
       final isPastOneTimeReminder = todo.repeatType == TodoRepeatType.none &&
           todo.remindAt!.isBefore(DateTime.now());
 
+      final title = todo.text.isEmpty
+          ? await _lookup(languageCode, 'reminder.title')
+          : todo.text;
+      final body = await _buildReminderBody(todo, languageCode);
+
       if (isPastOneTimeReminder) {
         await _notificationService.showTodoReminder(
           notificationId: notificationId,
-          title: todo.text.isEmpty ? '待办提醒' : todo.text,
-          body: _buildReminderBody(todo),
+          title: title,
+          body: body,
           payload: todo.id,
         );
         await markReminderFired(todoId);
@@ -59,8 +70,8 @@ class ReminderService {
 
       await _notificationService.scheduleTodoReminder(
         notificationId: notificationId,
-        title: todo.text.isEmpty ? '待办提醒' : todo.text,
-        body: _buildReminderBody(todo),
+        title: title,
+        body: body,
         remindAt: DateTime.fromMillisecondsSinceEpoch(remindAtValue),
         repeatType: todo.repeatType,
         payload: todo.id,
@@ -69,6 +80,7 @@ class ReminderService {
   }
 
   Future<void> scheduleReminderForTodo(TodoItem todo) async {
+    final languageCode = await _getLanguageCode();
     if (todo.remindAt == null) {
       await clearReminder(todo.id);
       return;
@@ -89,20 +101,29 @@ class ReminderService {
 
     if (todo.repeatType == TodoRepeatType.none &&
         todo.remindAt!.isBefore(DateTime.now())) {
+      final title = todo.text.isEmpty
+          ? await _lookup(languageCode, 'reminder.title')
+          : todo.text;
+      final body = await _buildReminderBody(todo, languageCode);
       await _notificationService.showTodoReminder(
         notificationId: notificationId,
-        title: todo.text.isEmpty ? '待办提醒' : todo.text,
-        body: _buildReminderBody(todo),
+        title: title,
+        body: body,
         payload: todo.id,
       );
       await markReminderFired(todo.id);
       return;
     }
 
+    final title = todo.text.isEmpty
+        ? await _lookup(languageCode, 'reminder.title')
+        : todo.text;
+    final body = await _buildReminderBody(todo, languageCode);
+
     await _notificationService.scheduleTodoReminder(
       notificationId: notificationId,
-      title: todo.text.isEmpty ? '待办提醒' : todo.text,
-      body: _buildReminderBody(todo),
+      title: title,
+      body: body,
       remindAt: todo.remindAt!,
       repeatType: todo.repeatType,
       payload: todo.id,
@@ -130,23 +151,42 @@ class ReminderService {
     }
   }
 
-  String _buildReminderBody(TodoItem todo) {
+  Future<String> _buildReminderBody(TodoItem todo, String languageCode) async {
     final parts = <String>[];
     if (todo.dueAt != null) {
-      parts.add('截止 ${_formatDateTime(todo.dueAt!)}');
+      final dueLabel = await _lookup(languageCode, 'reminder.dueLabel');
+      parts.add('$dueLabel ${_formatDateTime(todo.dueAt!)}');
     }
     if (todo.repeatType != TodoRepeatType.none) {
-      parts.add(_repeatLabel(todo.repeatType));
+      parts.add(await _repeatLabel(todo.repeatType, languageCode));
     }
-    return parts.isEmpty ? '到点提醒' : parts.join(' · ');
+    if (parts.isEmpty) {
+      return _lookup(languageCode, 'reminder.onTime');
+    }
+    return parts.join(' · ');
   }
 
-  String _repeatLabel(TodoRepeatType repeatType) {
-    return switch (repeatType) {
-      TodoRepeatType.daily => '每日重复',
-      TodoRepeatType.weekly => '每周重复',
-      TodoRepeatType.none => '一次性提醒',
+  Future<String> _repeatLabel(
+      TodoRepeatType repeatType, String languageCode) async {
+    final key = switch (repeatType) {
+      TodoRepeatType.daily => 'reminder.repeat.daily',
+      TodoRepeatType.weekly => 'reminder.repeat.weekly',
+      TodoRepeatType.none => 'reminder.repeat.none',
     };
+    return _lookup(languageCode, key);
+  }
+
+  Future<String> _getLanguageCode() async {
+    try {
+      final settings = await _settingsRepository.loadSettings();
+      return settings.languageCode;
+    } catch (_) {
+      return 'zh_CN';
+    }
+  }
+
+  Future<String> _lookup(String languageCode, String key) {
+    return LocaleTextLookup.tr(languageCode, key);
   }
 
   String _formatDateTime(DateTime value) {

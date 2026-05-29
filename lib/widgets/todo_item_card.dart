@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../models/tag.dart';
 import '../models/todo_item.dart';
 import '../models/todo_priority.dart';
@@ -36,7 +37,7 @@ class TodoItemCard extends ConsumerWidget {
     final isSelectionMode = notifier.isSelectionMode;
     final isCompleted = todo.status == TodoStatus.completed;
     final isRecognizing = todo.taskState == TodoTaskState.recognizing;
-    final priorityLabel = _resolvePriorityLabel(todo);
+    final priorityLabel = _resolvePriorityLabel(context, todo);
     final outerPadding = compact
         ? const EdgeInsets.symmetric(vertical: 0, horizontal: 0)
         : const EdgeInsets.symmetric(vertical: 4, horizontal: 8);
@@ -126,7 +127,7 @@ class TodoItemCard extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '转录中...',
+                        context.tr('todo.recognizingTitle'),
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
@@ -135,7 +136,7 @@ class TodoItemCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '正在将语音转换为文字',
+                        context.tr('todo.recognizingSubtitle'),
                         style: TextStyle(
                           fontSize: 13,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -180,7 +181,9 @@ class TodoItemCard extends ConsumerWidget {
                     children: [
                       if (isCompleted)
                         CompletedText(
-                          text: todo.text.isEmpty ? '识别中...' : todo.text,
+                          text: todo.text.isEmpty
+                              ? context.tr('todo.recognizingInline')
+                              : todo.text,
                           style: TextStyle(
                             fontSize: 20,
                             height: 1.1,
@@ -189,7 +192,9 @@ class TodoItemCard extends ConsumerWidget {
                         )
                       else
                         Text(
-                          todo.text.isEmpty ? '识别中...' : todo.text,
+                          todo.text.isEmpty
+                              ? context.tr('todo.recognizingInline')
+                              : todo.text,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -209,7 +214,12 @@ class TodoItemCard extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: 3),
                           child: Text(
-                            '失败: ${todo.errorMessage}',
+                            context.tr('todo.failedWithError', params: {
+                              'error': _displayErrorMessage(
+                                context,
+                                todo.errorMessage,
+                              )
+                            }),
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.red,
@@ -275,16 +285,16 @@ class TodoItemCard extends ConsumerWidget {
     );
   }
 
-  String? _resolvePriorityLabel(TodoItem todo) {
+  String? _resolvePriorityLabel(BuildContext context, TodoItem todo) {
     switch (todo.priority) {
       case TodoPriority.low:
-        return '低';
+        return context.tr('settings.todo.priority.low');
       case TodoPriority.normal:
-        return '普通';
+        return context.tr('settings.todo.priority.normal');
       case TodoPriority.high:
-        return '高';
+        return context.tr('settings.todo.priority.high');
       case TodoPriority.urgent:
-        return '紧急';
+        return context.tr('settings.todo.priority.urgent');
     }
   }
 
@@ -447,7 +457,7 @@ class TodoItemCard extends ConsumerWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Edit'),
+                title: Text(context.tr('todo.editAction')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showEditDialog(context, notifier, todo);
@@ -455,7 +465,7 @@ class TodoItemCard extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.category_outlined),
-                title: const Text('设置分类'),
+                title: Text(context.tr('todo.setCategory')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _openCategoryPicker(context, ref, notifier, todo);
@@ -463,7 +473,7 @@ class TodoItemCard extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.notifications_active_outlined),
-                title: const Text('设置提醒时间'),
+                title: Text(context.tr('todo.setReminderTime')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _pickReminderTime(context, notifier, todo);
@@ -472,7 +482,7 @@ class TodoItemCard extends ConsumerWidget {
               if (todo.remindAt != null)
                 ListTile(
                   leading: const Icon(Icons.notifications_off_outlined),
-                  title: const Text('清除提醒时间'),
+                  title: Text(context.tr('todo.clearReminderTime')),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _clearReminderTime(context, notifier, todo);
@@ -480,7 +490,7 @@ class TodoItemCard extends ConsumerWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.event_outlined),
-                title: const Text('设置截止时间'),
+                title: Text(context.tr('todo.setDueTime')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _pickDueTime(context, notifier, todo);
@@ -489,7 +499,7 @@ class TodoItemCard extends ConsumerWidget {
               if (todo.dueAt != null)
                 ListTile(
                   leading: const Icon(Icons.event_busy_outlined),
-                  title: const Text('清除截止时间'),
+                  title: Text(context.tr('todo.clearDueTime')),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _clearDueTime(context, notifier, todo);
@@ -497,7 +507,7 @@ class TodoItemCard extends ConsumerWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.flag),
-                title: const Text('设置优先级'),
+                title: Text(context.tr('todo.setPriority')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showPriorityPicker(context, notifier, todo);
@@ -505,7 +515,7 @@ class TodoItemCard extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.label_outline),
-                title: const Text('编辑标签'),
+                title: Text(context.tr('todo.editTags')),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _openTagPicker(context, ref, notifier, todo);
@@ -514,7 +524,7 @@ class TodoItemCard extends ConsumerWidget {
               if (!isCompleted)
                 ListTile(
                   leading: const Icon(Icons.mic),
-                  title: const Text('Re-record'),
+                  title: Text(context.tr('todo.reRecordAction')),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _reRecord(context, ref, todo);
@@ -523,7 +533,7 @@ class TodoItemCard extends ConsumerWidget {
               if (hasAudio)
                 ListTile(
                   leading: const Icon(Icons.play_arrow),
-                  title: const Text('Playback'),
+                  title: Text(context.tr('todo.playbackAction')),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _playback(context, ref, todo);
@@ -531,8 +541,8 @@ class TodoItemCard extends ConsumerWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title:
-                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                title: Text(context.tr('common.delete'),
+                    style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _confirmDelete(context, notifier, todo);
@@ -558,7 +568,7 @@ class TodoItemCard extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: TodoPriority.values.map((p) {
               return ListTile(
-                title: Text(_priorityToLabel(p)),
+                title: Text(_priorityToLabel(context, p)),
                 onTap: () => Navigator.pop(ctx, p),
               );
             }).toList(),
@@ -572,16 +582,16 @@ class TodoItemCard extends ConsumerWidget {
     }
   }
 
-  String _priorityToLabel(TodoPriority p) {
+  String _priorityToLabel(BuildContext context, TodoPriority p) {
     switch (p) {
       case TodoPriority.low:
-        return '低';
+        return context.tr('settings.todo.priority.low');
       case TodoPriority.normal:
-        return '普通';
+        return context.tr('settings.todo.priority.normal');
       case TodoPriority.high:
-        return '高';
+        return context.tr('settings.todo.priority.high');
       case TodoPriority.urgent:
-        return '紧急';
+        return context.tr('settings.todo.priority.urgent');
     }
   }
 
@@ -613,7 +623,7 @@ class TodoItemCard extends ConsumerWidget {
       context,
       initialDateTime:
           todo.remindAt ?? DateTime.now().add(const Duration(hours: 1)),
-      title: '选择提醒时间',
+      title: context.tr('todo.pickReminderTimeTitle'),
     );
 
     if (picked == null || !context.mounted) return;
@@ -629,7 +639,7 @@ class TodoItemCard extends ConsumerWidget {
       context,
       initialDateTime:
           todo.dueAt ?? DateTime.now().add(const Duration(days: 1)),
-      title: '选择截止时间',
+      title: context.tr('todo.pickDueTimeTitle'),
     );
 
     if (picked == null || !context.mounted) return;
@@ -684,7 +694,7 @@ class TodoItemCard extends ConsumerWidget {
   ) async {
     await notifier.updateReminderTime(todo.id, null);
     if (context.mounted) {
-      _showToast(context, '已清除提醒时间');
+      _showToast(context, context.tr('todo.clearedReminderTimeToast'));
     }
   }
 
@@ -695,7 +705,7 @@ class TodoItemCard extends ConsumerWidget {
   ) async {
     await notifier.updateDueTime(todo.id, null);
     if (context.mounted) {
-      _showToast(context, '已清除截止时间');
+      _showToast(context, context.tr('todo.clearedDueTimeToast'));
     }
   }
 
@@ -726,19 +736,19 @@ class TodoItemCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Note'),
+        title: Text(context.tr('todo.editDialogTitle')),
         content: TextField(
           controller: controller,
           maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Enter note text',
+          decoration: InputDecoration(
+            hintText: context.tr('todo.editDialogHint'),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(context.tr('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -747,7 +757,7 @@ class TodoItemCard extends ConsumerWidget {
               await notifier.updateText(todo.id, controller.text.trim());
               navigator.pop();
             },
-            child: const Text('Save'),
+            child: Text(context.tr('common.save')),
           ),
         ],
       ),
@@ -759,7 +769,10 @@ class TodoItemCard extends ConsumerWidget {
 
     recordingNotifier.startReRecord(todo).catchError((error) {
       if (context.mounted) {
-        _showToast(context, '重录失败: $error');
+        _showToast(
+          context,
+          context.tr('todo.reRecordFailed', params: {'error': '$error'}),
+        );
       }
     });
   }
@@ -769,7 +782,7 @@ class TodoItemCard extends ConsumerWidget {
     final audioPath = todo.audioPath;
     if (audioPath == null || audioPath.isEmpty) {
       if (context.mounted) {
-        _showToast(context, '没有可播放的音频');
+        _showToast(context, context.tr('todo.noAudioToPlay'));
       }
       return;
     }
@@ -778,7 +791,10 @@ class TodoItemCard extends ConsumerWidget {
       await ref.read(audioPlaybackServiceProvider).play(audioPath);
     } catch (e) {
       if (context.mounted) {
-        _showToast(context, '播放失败: $e');
+        _showToast(
+          context,
+          context.tr('todo.playbackFailed', params: {'error': '$e'}),
+        );
       }
     }
   }
@@ -824,12 +840,12 @@ class TodoItemCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note?'),
+        title: Text(context.tr('todo.deleteDialogTitle')),
+        content: Text(context.tr('todo.deleteDialogContent')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.tr('common.cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -841,10 +857,26 @@ class TodoItemCard extends ConsumerWidget {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Delete'),
+            child: Text(context.tr('common.delete')),
           ),
         ],
       ),
     );
+  }
+
+  String _displayErrorMessage(BuildContext context, String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return '';
+    }
+
+    final value = raw.startsWith('Exception: ') ? raw.substring(11) : raw;
+    switch (value) {
+      case 'error.recordingFileGenerationFailed':
+        return context.tr('errors.recordingFileGenerationFailed');
+      case 'error.speechRecognitionFailed':
+        return context.tr('errors.speechRecognitionFailed');
+      default:
+        return raw;
+    }
   }
 }

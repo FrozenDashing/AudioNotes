@@ -43,6 +43,12 @@ class SettingsState {
   /// Whether completed todos are aggregated into a dedicated completed group
   final bool aggregateCompletedTodos;
 
+  /// Whether to auto-remove trailing sentence-ending period from recognition text
+  final bool autoRemoveTrailingPeriod;
+
+  /// Selected app language code (e.g. zh_CN, en)
+  final String languageCode;
+
   SettingsState({
     required this.currentModelId,
     required this.autoModelSelect,
@@ -55,6 +61,8 @@ class SettingsState {
     this.todoSortDirection = SortDirection.asc,
     this.defaultTodoPriority = TodoPriority.normal,
     this.aggregateCompletedTodos = false,
+    this.autoRemoveTrailingPeriod = false,
+    this.languageCode = 'zh_CN',
   });
 
   /// Default settings
@@ -71,6 +79,8 @@ class SettingsState {
       todoSortDirection: SortDirection.asc,
       defaultTodoPriority: TodoPriority.normal,
       aggregateCompletedTodos: false,
+      autoRemoveTrailingPeriod: false,
+      languageCode: 'zh_CN',
     );
   }
 
@@ -87,6 +97,8 @@ class SettingsState {
     SortDirection? todoSortDirection,
     TodoPriority? defaultTodoPriority,
     bool? aggregateCompletedTodos,
+    bool? autoRemoveTrailingPeriod,
+    String? languageCode,
   }) {
     return SettingsState(
       currentModelId: currentModelId ?? this.currentModelId,
@@ -101,6 +113,9 @@ class SettingsState {
       defaultTodoPriority: defaultTodoPriority ?? this.defaultTodoPriority,
       aggregateCompletedTodos:
           aggregateCompletedTodos ?? this.aggregateCompletedTodos,
+      autoRemoveTrailingPeriod:
+          autoRemoveTrailingPeriod ?? this.autoRemoveTrailingPeriod,
+      languageCode: languageCode ?? this.languageCode,
     );
   }
 }

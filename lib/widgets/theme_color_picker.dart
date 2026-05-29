@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_i18n.dart';
 import '../models/settings_state.dart';
 
 /// Widget for selecting theme color with preset options and custom color picker
@@ -49,24 +50,24 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
           runSpacing: 8,
           children: [
             _buildThemeOption(
-              '默认',
+              context.tr('themePicker.default'),
               Theme.of(context).colorScheme.primary,
               ThemeModeOption.light,
             ),
             _buildThemeOption(
-              '蓝色',
+              context.tr('themePicker.blue'),
               Colors.blue,
               ThemeModeOption.custom,
               customColor: Colors.blue,
             ),
             _buildThemeOption(
-              '暖橙',
+              context.tr('themePicker.warmOrange'),
               Colors.orange,
               ThemeModeOption.custom,
               customColor: Colors.orange,
             ),
             _buildThemeOption(
-              '深绿',
+              context.tr('themePicker.deepGreen'),
               Colors.green,
               ThemeModeOption.custom,
               customColor: Colors.green,
@@ -78,7 +79,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
         // Follow system option
         Row(
           children: [
-            const Text('跟随系统'),
+            Text(context.tr('themePicker.followSystem')),
             const Spacer(),
             Switch(
               value: widget.currentThemeMode == ThemeModeOption.system,
@@ -99,7 +100,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
         // Custom color picker
         Row(
           children: [
-            const Text('自定义颜色'),
+            Text(context.tr('themePicker.customColor')),
             const Spacer(),
             Container(
               width: 30,
@@ -119,7 +120,8 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
 
         // Theme preview
         const SizedBox(height: 16),
-        const Text('预览:', style: TextStyle(fontSize: 14)),
+        Text(context.tr('themePicker.preview'),
+            style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
@@ -137,10 +139,10 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
                   color: _getCurrentThemeColor(),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    '主题色预览',
-                    style: TextStyle(
+                    context.tr('themePicker.themePreview'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
@@ -155,7 +157,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
                     onChanged: (_) {},
                     activeColor: _getCurrentThemeColor(),
                   ),
-                  const Text('待办项示例'),
+                  Text(context.tr('themePicker.todoExample')),
                 ],
               ),
             ],
@@ -234,7 +236,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('选择主题色'),
+              title: Text(context.tr('themePicker.dialogTitle')),
               content: SingleChildScrollView(
                 child: ColorPickerGrid(
                   selectedColor: _selectedCustomColor,
@@ -248,7 +250,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
+                  child: Text(context.tr('common.cancel')),
                 ),
                 TextButton(
                   onPressed: () {
@@ -256,7 +258,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
                     widget.onThemeModeChanged(ThemeModeOption.custom);
                     Navigator.pop(context);
                   },
-                  child: const Text('确定'),
+                  child: Text(context.tr('common.confirm')),
                 ),
               ],
             );

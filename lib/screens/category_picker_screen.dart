@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../models/category.dart';
 import '../providers/app_providers.dart';
 import 'category_create_screen.dart';
@@ -34,7 +35,7 @@ class CategoryPickerScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choose Category'),
+        title: Text(context.tr('category.chooseTitle')),
       ),
       body: SafeArea(
         child: categoriesAsync.when(
@@ -100,7 +101,7 @@ class CategoryPickerScreen extends ConsumerWidget {
                           ref.invalidate(categoryListProvider);
                         }
                       },
-                      child: const Text('Add Category'),
+                      child: Text(context.tr('category.addAction')),
                     ),
                   ),
                 ),
@@ -133,7 +134,7 @@ class CategoryPickerScreen extends ConsumerWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('编辑分类'),
+                title: Text(context.tr('category.editTitle')),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _editCategory(context, ref, category);
@@ -141,8 +142,9 @@ class CategoryPickerScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('删除分类', style: TextStyle(color: Colors.red)),
-                subtitle: const Text('该分类下待办将移动到未分类'),
+                title: Text(context.tr('category.deleteTitle'),
+                    style: const TextStyle(color: Colors.red)),
+                subtitle: Text(context.tr('category.deleteSubtitle')),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _deleteCategory(context, ref, category);
@@ -169,7 +171,7 @@ class CategoryPickerScreen extends ConsumerWidget {
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) {
             return AlertDialog(
-              title: const Text('编辑分类'),
+              title: Text(context.tr('category.editTitle')),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -177,9 +179,9 @@ class CategoryPickerScreen extends ConsumerWidget {
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: '分类名称',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.tr('category.nameLabel'),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -214,11 +216,11 @@ class CategoryPickerScreen extends ConsumerWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('取消'),
+                  child: Text(context.tr('common.cancel')),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(dialogContext, true),
-                  child: const Text('保存'),
+                  child: Text(context.tr('common.save')),
                 ),
               ],
             );
@@ -252,17 +254,18 @@ class CategoryPickerScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('删除分类'),
-          content: Text('确定删除“${category.name}”？\n该分类下的待办将移动到未分类。'),
+          title: Text(context.tr('category.deleteTitle')),
+          content: Text(context.tr('category.deleteConfirmWithName',
+              params: {'name': category.name})),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('取消'),
+              child: Text(context.tr('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('删除'),
+              child: Text(context.tr('common.delete')),
             ),
           ],
         );
@@ -351,12 +354,12 @@ class _CreateCategoryTile extends StatelessWidget {
             color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline, size: 24),
-            SizedBox(height: 8),
-            Text('Create New'),
+            const Icon(Icons.add_circle_outline, size: 24),
+            const SizedBox(height: 8),
+            Text(context.tr('category.createNew')),
           ],
         ),
       ),

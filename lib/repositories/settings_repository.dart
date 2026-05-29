@@ -17,6 +17,9 @@ class SettingsRepository {
   static const String _todoSortDirectionKey = 'todo_sort_direction';
   static const String _defaultTodoPriorityKey = 'default_todo_priority';
   static const String _aggregateCompletedTodosKey = 'aggregate_completed_todos';
+  static const String _autoRemoveTrailingPeriodKey =
+      'auto_remove_trailing_period';
+  static const String _languageCodeKey = 'language_code';
 
   /// Load settings from shared preferences
   Future<SettingsState> loadSettings() async {
@@ -62,6 +65,9 @@ class SettingsRepository {
       ),
       aggregateCompletedTodos:
           prefs.getBool(_aggregateCompletedTodosKey) ?? false,
+      autoRemoveTrailingPeriod:
+          prefs.getBool(_autoRemoveTrailingPeriodKey) ?? false,
+      languageCode: prefs.getString(_languageCodeKey) ?? 'zh_CN',
     );
   }
 
@@ -100,6 +106,13 @@ class SettingsRepository {
     result = result &&
         await prefs.setBool(
             _aggregateCompletedTodosKey, settings.aggregateCompletedTodos);
+
+    result = result &&
+        await prefs.setBool(
+            _autoRemoveTrailingPeriodKey, settings.autoRemoveTrailingPeriod);
+
+    result = result &&
+        await prefs.setString(_languageCodeKey, settings.languageCode);
 
     return result;
   }

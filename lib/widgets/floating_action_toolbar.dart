@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 
 /// Floating action toolbar for batch operations on todos
@@ -34,7 +35,7 @@ class FloatingActionToolbar extends ConsumerWidget {
               if (hasCompletedTodos)
                 IconButton(
                   icon: const Icon(Icons.cleaning_services),
-                  tooltip: '清除所有已完成待办',
+                  tooltip: context.tr('toolbar.clearCompletedTooltip'),
                   onPressed: () => _confirmDeleteAllCompleted(context, ref),
                   color: Colors.orange,
                 ),
@@ -42,14 +43,14 @@ class FloatingActionToolbar extends ConsumerWidget {
                 const VerticalDivider(width: 1),
                 IconButton(
                   icon: const Icon(Icons.check),
-                  tooltip: '完成选中的待办',
+                  tooltip: context.tr('toolbar.completeSelectedTooltip'),
                   onPressed: () => _completeSelected(context, ref),
                   color: Colors.green,
                 ),
                 const VerticalDivider(width: 1),
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  tooltip: '删除选中的待办',
+                  tooltip: context.tr('toolbar.deleteSelectedTooltip'),
                   onPressed: () => _confirmDeleteSelected(context, ref),
                   color: Colors.red,
                 ),
@@ -65,12 +66,12 @@ class FloatingActionToolbar extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除已完成待办'),
-        content: const Text('确定要删除所有已完成的待办吗？此操作不可恢复。'),
+        title: Text(context.tr('toolbar.clearCompletedTitle')),
+        content: Text(context.tr('toolbar.clearCompletedContent')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(context.tr('common.cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -81,11 +82,12 @@ class FloatingActionToolbar extends ConsumerWidget {
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已清除所有已完成待办')),
+                  SnackBar(
+                      content: Text(context.tr('toolbar.clearedCompleted'))),
                 );
               }
             },
-            child: const Text('清除'),
+            child: Text(context.tr('toolbar.clearAction')),
           ),
         ],
       ),
@@ -103,7 +105,10 @@ class FloatingActionToolbar extends ConsumerWidget {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已完成 ${selectedIds.length} 个待办')),
+          SnackBar(
+            content: Text(context.tr('toolbar.completedCount',
+                params: {'count': '${selectedIds.length}'})),
+          ),
         );
       }
     });
@@ -117,12 +122,13 @@ class FloatingActionToolbar extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除选中待办'),
-        content: Text('确定要删除选中的 ${selectedIds.length} 个待办吗？此操作不可恢复。'),
+        title: Text(context.tr('toolbar.deleteSelectedTitle')),
+        content: Text(context.tr('toolbar.deleteSelectedContent',
+            params: {'count': '${selectedIds.length}'})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(context.tr('common.cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -135,11 +141,14 @@ class FloatingActionToolbar extends ConsumerWidget {
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('已删除 ${selectedIds.length} 个待办')),
+                  SnackBar(
+                    content: Text(context.tr('toolbar.deletedCount',
+                        params: {'count': '${selectedIds.length}'})),
+                  ),
                 );
               }
             },
-            child: const Text('删除'),
+            child: Text(context.tr('common.delete')),
           ),
         ],
       ),

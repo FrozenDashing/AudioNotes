@@ -142,6 +142,18 @@ class SettingsNotifier extends Notifier<SettingsState> {
     await _saveSettings();
     await ref.read(todoListProvider.notifier).loadTodos();
   }
+
+  /// Toggle auto-removal of trailing sentence-ending period in recognition text
+  Future<void> setAutoRemoveTrailingPeriod(bool enabled) async {
+    state = state.copyWith(autoRemoveTrailingPeriod: enabled);
+    await _saveSettings();
+  }
+
+  /// Set app language code used by i18n
+  Future<void> setLanguageCode(String languageCode) async {
+    state = state.copyWith(languageCode: languageCode);
+    await _saveSettings();
+  }
 }
 
 /// Provider for accessing settings

@@ -75,6 +75,7 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
     reminderRepository: ref.read(reminderRepositoryProvider),
     todoRepository: ref.read(todoRepositoryProvider),
     notificationService: ref.read(notificationServiceProvider),
+    settingsRepository: ref.read(settingsRepositoryProvider),
   );
 });
 
@@ -153,7 +154,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
 
       final wavPath = await recorder.stopRecording();
       if (wavPath == null || wavPath.isEmpty) {
-        throw Exception('录音文件生成失败');
+        throw Exception('error.recordingFileGenerationFailed');
       }
 
       final replacingTodoId = _replacementTodoId;
@@ -217,6 +218,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
   ) async {
     final recognition = ref.read(recognitionServiceProvider);
     final repository = ref.read(todoRepositoryProvider);
+    final settings = ref.read(settingsProvider);
 
     try {
       // Ensure model is ready. If not, attempt reload once.
@@ -254,7 +256,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
       }
 
       if (detailed == null || (detailed['text'] ?? '').toString().isEmpty) {
-        throw Exception('未能识别语音内容');
+        throw Exception('error.speechRecognitionFailed');
       }
 
       // Normalize whitespace first and operate on a non-null local copy
@@ -277,6 +279,10 @@ class RecordingNotifier extends Notifier<RecordingState> {
         } else {
           processed = '$processed.';
         }
+      }
+
+      if (settings.autoRemoveTrailingPeriod) {
+        processed = processed.replaceFirst(RegExp(r'[。.]$'), '');
       }
 
       // Compute a heuristic confidence score based on text and simple audio cues
@@ -969,6 +975,8 @@ final todoGroupKeysProvider = Provider<List<String>>((ref) {
         categories: categories,
         sortField: settings.todoSortField,
         direction: settings.todoSortDirection,
+        completedLabel: 'completed',
+        uncategorizedLabel: 'uncategorized',
         aggregateCompletedTodos: settings.aggregateCompletedTodos,
         groupOrderMap: groupOrderMap,
       );
@@ -994,6 +1002,8 @@ final todoGroupProvider = Provider.family<TodoGroup?, String>((ref, groupKey) {
         categories: categories,
         sortField: settings.todoSortField,
         direction: settings.todoSortDirection,
+        completedLabel: 'completed',
+        uncategorizedLabel: 'uncategorized',
         aggregateCompletedTodos: settings.aggregateCompletedTodos,
         groupOrderMap: groupOrderMap,
       );

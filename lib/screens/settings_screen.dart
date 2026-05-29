@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_i18n.dart';
 import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../providers/settings_provider.dart';
 import 'settings/appearance_settings_screen.dart';
+import 'settings/general_settings_screen.dart';
 import 'settings/todo_settings_screen.dart';
 import 'settings/voice_settings_screen.dart';
 
@@ -21,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text(context.tr('settings.title')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -31,11 +33,27 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _SettingsHubCard(
+            icon: Icons.tune_outlined,
+            accentColor: Theme.of(context).colorScheme.primary,
+            title: context.tr('settings.section.general'),
+            subtitle:
+                '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)}',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const GeneralSettingsScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          _SettingsHubCard(
             icon: Icons.palette_outlined,
             accentColor: Theme.of(context).colorScheme.primary,
-            title: '外观设置',
+            title: context.tr('settings.section.appearance'),
             subtitle:
-                '字号：${_fontSizeLabel(settings.fontSizeOption)} · 主题色：${_themeModeLabel(settings.themeMode)}',
+                '${context.tr('settings.summary.fontSize')}：${_fontSizeLabel(context, settings.fontSizeOption)} · ${context.tr('settings.summary.theme')}：${_themeModeLabel(context, settings.themeMode)}',
             onTap: () {
               Navigator.push(
                 context,
@@ -49,9 +67,9 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsHubCard(
             icon: Icons.checklist_outlined,
             accentColor: Theme.of(context).colorScheme.secondary,
-            title: '代办设置',
+            title: context.tr('settings.section.todo'),
             subtitle:
-                '默认优先级：${_priorityLabel(settings.defaultTodoPriority)} · 已完成聚合：${settings.aggregateCompletedTodos ? '开启' : '关闭'} · 排序：${_sortSummary(settings)}',
+                '${context.tr('settings.summary.defaultPriority')}：${_priorityLabel(context, settings.defaultTodoPriority)} · ${context.tr('settings.summary.completedAggregation')}：${settings.aggregateCompletedTodos ? context.tr('common.enabled') : context.tr('common.disabled')} · ${context.tr('settings.summary.sort')}：${_sortSummary(context, settings)}',
             onTap: () {
               Navigator.push(
                 context,
@@ -65,10 +83,10 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsHubCard(
             icon: Icons.graphic_eq_outlined,
             accentColor: Theme.of(context).colorScheme.tertiary,
-            title: '语音设置',
+            title: context.tr('settings.section.voice'),
             subtitle: settings.autoModelSelect
-                ? '模型：自动选择'
-                : '模型：${settings.currentModelId}',
+                ? '${context.tr('settings.summary.model')}：${context.tr('settings.summary.autoSelect')} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}'
+                : '${context.tr('settings.summary.model')}：${settings.currentModelId} · ${context.tr('settings.summary.trailingPeriodRemoval')}：${settings.autoRemoveTrailingPeriod ? context.tr('common.enabled') : context.tr('common.disabled')}',
             onTap: () {
               Navigator.push(
                 context,
@@ -84,62 +102,69 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(settingsProvider.notifier).resetToDefaults();
             },
             icon: const Icon(Icons.restart_alt),
-            label: const Text('恢复默认'),
+            label: Text(context.tr('settings.restoreDefaults')),
           ),
         ],
       ),
     );
   }
 
-  String _themeModeLabel(ThemeModeOption mode) {
+  String _languageLabel(BuildContext context, String code) {
+    if (code == 'en') {
+      return context.tr('settings.general.langEn');
+    }
+    return context.tr('settings.general.langZhCn');
+  }
+
+  String _themeModeLabel(BuildContext context, ThemeModeOption mode) {
     switch (mode) {
       case ThemeModeOption.system:
-        return '跟随系统';
+        return context.tr('settings.appearance.themeMode.system');
       case ThemeModeOption.light:
-        return '浅色';
+        return context.tr('settings.appearance.themeMode.light');
       case ThemeModeOption.dark:
-        return '深色';
+        return context.tr('settings.appearance.themeMode.dark');
       case ThemeModeOption.custom:
-        return '自定义';
+        return context.tr('settings.appearance.themeMode.custom');
     }
   }
 
-  String _fontSizeLabel(FontSizeOption option) {
+  String _fontSizeLabel(BuildContext context, FontSizeOption option) {
     switch (option) {
       case FontSizeOption.small:
-        return '小';
+        return context.tr('settings.appearance.fontSizeOption.small');
       case FontSizeOption.medium:
-        return '中';
+        return context.tr('settings.appearance.fontSizeOption.medium');
       case FontSizeOption.large:
-        return '大';
+        return context.tr('settings.appearance.fontSizeOption.large');
       case FontSizeOption.custom:
-        return '自定义';
+        return context.tr('settings.appearance.fontSizeOption.custom');
     }
   }
 
-  String _priorityLabel(TodoPriority priority) {
+  String _priorityLabel(BuildContext context, TodoPriority priority) {
     switch (priority) {
       case TodoPriority.low:
-        return '低';
+        return context.tr('settings.todo.priority.low');
       case TodoPriority.normal:
-        return '普通';
+        return context.tr('settings.todo.priority.normal');
       case TodoPriority.high:
-        return '高';
+        return context.tr('settings.todo.priority.high');
       case TodoPriority.urgent:
-        return '紧急';
+        return context.tr('settings.todo.priority.urgent');
     }
   }
 
-  String _sortSummary(SettingsState settings) {
+  String _sortSummary(BuildContext context, SettingsState settings) {
     final field = switch (settings.todoSortField) {
-      TodoSortField.manual => '手动顺序',
-      TodoSortField.createdAt => '创建时间',
-      TodoSortField.dueAt => '截止时间',
-      TodoSortField.priority => '优先级',
+      TodoSortField.manual => context.tr('settings.todo.sort.manual'),
+      TodoSortField.createdAt => context.tr('settings.todo.sort.createdAt'),
+      TodoSortField.dueAt => context.tr('settings.todo.sort.dueAt'),
+      TodoSortField.priority => context.tr('settings.todo.sort.priority'),
     };
     final direction = switch (settings.todoSortDirection) {
-      SortDirection.asc => '升序',
-      SortDirection.desc => '降序',
+      SortDirection.asc => context.tr('settings.todo.sort.asc'),
+      SortDirection.desc => context.tr('settings.todo.sort.desc'),
     };
     return '$field / $direction';
   }

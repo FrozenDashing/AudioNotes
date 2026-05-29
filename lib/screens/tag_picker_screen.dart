@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../models/tag.dart';
 import '../providers/app_providers.dart';
 import 'tag_create_screen.dart';
@@ -28,7 +29,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choose Tags'),
+        title: Text(context.tr('tag.chooseTitle')),
       ),
       body: tagsAsync.when(
         data: (tags) {
@@ -43,7 +44,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
                     if (index == tags.length) {
                       return ListTile(
                         leading: const Icon(Icons.add),
-                        title: const Text('Create new tag'),
+                        title: Text(context.tr('tag.createNewAction')),
                         onTap: () async {
                           final created = await Navigator.push<Tag?>(
                             context,
@@ -67,7 +68,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
                         child: const Icon(Icons.label, color: Colors.white),
                       ),
                       title: Text(tag.name),
-                      subtitle: const Text('长按编辑/删除'),
+                      subtitle: Text(context.tr('tag.longPressHint')),
                       onLongPress: () => _showTagActions(context, tag),
                       trailing: Checkbox(
                         value: _selected.contains(tag.id),
@@ -102,7 +103,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
                       child: ElevatedButton(
                         onPressed: () =>
                             Navigator.pop(context, _selected.toList()),
-                        child: const Text('Apply'),
+                        child: Text(context.tr('tag.applySelection')),
                       ),
                     ),
                   ],
@@ -127,7 +128,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('编辑标签'),
+                title: Text(context.tr('tag.editTitle')),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _editTag(context, tag);
@@ -135,7 +136,8 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('删除标签', style: TextStyle(color: Colors.red)),
+                title: Text(context.tr('tag.deleteTitle'),
+                    style: const TextStyle(color: Colors.red)),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _deleteTag(context, tag);
@@ -154,22 +156,22 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('编辑标签'),
+          title: Text(context.tr('tag.editTitle')),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: '标签名称',
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: context.tr('tag.nameLabel'),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('取消'),
+              child: Text(context.tr('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('保存'),
+              child: Text(context.tr('common.save')),
             ),
           ],
         );
@@ -195,17 +197,18 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('删除标签'),
-          content: Text('确定删除“${tag.name}”？'),
+          title: Text(context.tr('tag.deleteTitle')),
+          content: Text(context
+              .tr('tag.deleteConfirmWithName', params: {'name': tag.name})),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('取消'),
+              child: Text(context.tr('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('删除'),
+              child: Text(context.tr('common.delete')),
             ),
           ],
         );

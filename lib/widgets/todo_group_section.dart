@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 
 import '../models/category.dart';
 import '../models/todo_group.dart';
 import '../models/todo_item.dart';
 import '../providers/app_providers.dart';
+import '../services/todo_grouping_service.dart';
 import 'todo_item_card.dart';
 
 /// Category shell that renders a todo group.
@@ -122,7 +124,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
             children: [
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('修改分类'),
+                title: Text(context.tr('category.editTitle')),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _editCategory();
@@ -130,8 +132,9 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('删除分类', style: TextStyle(color: Colors.red)),
-                subtitle: const Text('该分类下待办将移动到未分类'),
+                title: Text(context.tr('category.deleteTitle'),
+                    style: const TextStyle(color: Colors.red)),
+                subtitle: Text(context.tr('category.deleteSubtitle')),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _deleteCategory();
@@ -167,7 +170,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) {
             return AlertDialog(
-              title: const Text('修改分类'),
+              title: Text(context.tr('category.editTitle')),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -175,9 +178,9 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: '分类名称',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.tr('category.nameLabel'),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -212,11 +215,11 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('取消'),
+                  child: Text(context.tr('common.cancel')),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(dialogContext, true),
-                  child: const Text('保存'),
+                  child: Text(context.tr('common.save')),
                 ),
               ],
             );
@@ -245,17 +248,18 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('删除分类'),
-          content: Text('确定删除“${widget.group.title}”？\n该分类下的待办将移动到未分类。'),
+          title: Text(context.tr('category.deleteTitle')),
+          content: Text(context.tr('category.deleteConfirmWithName',
+              params: {'name': widget.group.title})),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('取消'),
+              child: Text(context.tr('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('删除'),
+              child: Text(context.tr('common.delete')),
             ),
           ],
         );
@@ -274,7 +278,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
   }
 
   String _noteCountLabel(int count) {
-    return '$count 条笔记';
+    return context.tr('group.noteCount', params: {'count': count.toString()});
   }
 
   @override
@@ -292,6 +296,13 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
     final groupTextColor = widget.group.isCompletedAggregate
         ? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.onSurface;
+    final displayGroupTitle =
+        widget.group.groupKey == TodoGroupingService.completedGroupKey
+            ? context.tr('group.completed')
+            : widget.group.groupKey == TodoGroupingService.uncategorizedGroupKey
+                ? context.tr('group.uncategorized')
+                : widget.group.title;
+
     final groupSubTextColor = widget.group.isCompletedAggregate
         ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85)
         : theme.colorScheme.onSurfaceVariant;
@@ -348,7 +359,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.group.title,
+                                  displayGroupTitle,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: groupTextColor,
@@ -425,7 +436,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 18),
                                   child: Text(
-                                    '暂无笔记',
+                                    context.tr('home.empty.title'),
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),

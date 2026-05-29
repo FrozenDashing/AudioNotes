@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_i18n/flutter_i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'l10n/app_i18n.dart';
 import 'screens/home_screen.dart';
 import 'services/settings_service.dart';
 import 'providers/settings_provider.dart';
@@ -29,6 +32,14 @@ class AudioNotesApp extends ConsumerStatefulWidget {
 }
 
 class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
+  final FlutterI18nDelegate _i18nDelegate = FlutterI18nDelegate(
+    translationLoader: FileTranslationLoader(
+      basePath: 'assets/i18n',
+      fallbackFile: 'en',
+      useCountryCode: true,
+    ),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -55,8 +66,19 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
     );
 
     return MaterialApp(
-      title: 'AudioNotes',
+      onGenerateTitle: (context) => context.tr('app.title'),
       debugShowCheckedModeBanner: false,
+      locale: _localeFromCode(settings.languageCode),
+      supportedLocales: const [
+        Locale('zh', 'CN'),
+        Locale('en'),
+      ],
+      localizationsDelegates: [
+        _i18nDelegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: settingsService.getThemeData(settings),
       darkTheme: settingsService.getDarkThemeData(settings),
       themeMode: settingsService.getThemeMode(settings),
@@ -70,5 +92,15 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
       },
       home: const HomeScreen(),
     );
+  }
+
+  Locale _localeFromCode(String code) {
+    if (code == 'en') {
+      return const Locale('en');
+    }
+    if (code == 'zh' || code == 'zh_CN') {
+      return const Locale('zh', 'CN');
+    }
+    return const Locale('zh', 'CN');
   }
 }

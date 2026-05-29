@@ -1,0 +1,244 @@
+{
+  "app": {
+    "title": "AudioNotes"
+  },
+  "common": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "auto": "Auto",
+    "manual": "Manual",
+    "cancel": "Cancel",
+    "save": "Save",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "download": "Download",
+    "setAsCurrent": "Set as current",
+    "version": "Version"
+  },
+  "settings": {
+    "title": "Settings",
+    "restoreDefaults": "Restore Defaults",
+    "section": {
+      "general": "General",
+      "appearance": "Appearance",
+      "todo": "Todos",
+      "voice": "Voice"
+    },
+    "general": {
+      "title": "General Settings",
+      "language": "Language",
+      "languageSubtitle": "Switch application language",
+      "langZhCn": "简体中文",
+      "langEn": "English"
+    },
+    "appearance": {
+      "themeColor": "Theme Color",
+      "fontSize": "Font Size",
+      "themeMode": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark",
+        "custom": "Custom"
+      },
+      "fontSizeOption": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large",
+        "custom": "Custom"
+      }
+    },
+    "todo": {
+      "defaultPriority": "Default Priority",
+      "aggregateCompleted": "Completed Aggregation",
+      "aggregateCompletedTitle": "Group completed todos",
+      "aggregateCompletedSubtitle": "When enabled, all completed todos are grouped under Completed.",
+      "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "sort": {
+        "manual": "Manual order",
+        "createdAt": "Created time",
+        "dueAt": "Due time",
+        "priority": "Priority",
+        "asc": "Ascending",
+        "desc": "Descending"
+      }
+    },
+    "voice": {
+      "model": "Voice Model",
+      "currentAuto": "Current: Auto",
+      "currentManualPrefix": "Current: ",
+      "manageModel": "Manage Models",
+      "manageModelSubtitle": "Download, select, or delete speech models",
+      "autoSelectModel": "Auto-select model",
+      "autoSelectModelSubtitle": "When enabled, the app picks an available model automatically.",
+      "autoRemoveTrailingPeriod": "Auto-remove trailing period",
+      "autoRemoveTrailingPeriodSubtitle": "When enabled, recognized text removes ending 。 or ."
+    },
+    "summary": {
+      "fontSize": "Font size",
+      "theme": "Theme",
+      "defaultPriority": "Default priority",
+      "completedAggregation": "Completed aggregation",
+      "sort": "Sort",
+      "model": "Model",
+      "trailingPeriodRemoval": "Trailing period removal",
+      "autoSelect": "Auto"
+    }
+  },
+  "themePicker": {
+    "default": "Default",
+    "blue": "Blue",
+    "warmOrange": "Warm Orange",
+    "deepGreen": "Deep Green",
+    "followSystem": "Follow system",
+    "customColor": "Custom color",
+    "preview": "Preview:",
+    "themePreview": "Theme preview",
+    "todoExample": "Todo example",
+    "dialogTitle": "Choose theme color"
+  },
+  "fontSizePicker": {
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "custom": "Custom",
+    "followSystem": "Follow system font size",
+    "preview": "Preview:",
+    "titlePreview": "Font size preview",
+    "todoPreview": "This is a todo sample",
+    "completedPreview": "Completed todo sample"
+  },
+  "model": {
+    "selectVoiceModel": "Select Voice Model",
+    "noModels": "No available models",
+    "downloadComplete": "Model download completed",
+    "downloadFailedPrefix": "Download failed",
+    "downloadModel": "Download model",
+    "deleteModel": "Delete model",
+    "deleteModelConfirm": "Delete this speech model?",
+    "modelDeleted": "Model deleted",
+    "downloadFirst": "Please download the model first",
+    "lowLatency": "Low latency",
+    "highAccuracy": "High accuracy",
+    "errorPrefix": "Error"
+  },
+  "home": {
+    "sort": {
+      "title": "Sort",
+      "field": "Sort field",
+      "direction": "Sort direction",
+      "apply": "Apply"
+    },
+    "selection": {
+      "title": "Select",
+      "exit": "Exit selection",
+      "selectAll": "Select all",
+      "clearAll": "Clear selection"
+    },
+    "menu": {
+      "more": "More"
+    },
+    "empty": {
+      "title": "No notes",
+      "subtitle": "Tap the mic to start recording"
+    },
+    "record": {
+      "start": "Record",
+      "stop": "Stop",
+      "processing": "Processing...",
+      "startFailed": "Failed to start recording: {error}"
+    },
+    "model": {
+      "notDownloadedTitle": "Voice pack not downloaded",
+      "notDownloadedSubtitle": "Download a Chinese voice pack to use speech recognition.",
+      "downloadPack": "Download voice pack",
+      "downloadFirst": "Please download voice pack first",
+      "downloadingPack": "Downloading Chinese voice pack ({size} MB)...",
+      "downloadingProgress": "Downloading... {percent}%",
+      "extractingProgress": "Extracting... {percent}%",
+      "done": "Done!",
+      "ready": "Voice pack is ready!",
+      "downloadFailed": "Download failed: {error}",
+      "dialogIntro": "Download a Chinese voice pack to enable offline speech recognition.",
+      "smallModelHint": "• Small model: ~45 MB (recommended)",
+      "largeModelHint": "• Large model: ~1.8 GB (higher accuracy)",
+      "downloadSmallModel": "Download small model"
+    }
+  },
+  "toolbar": {
+    "clearCompletedTooltip": "Clear all completed todos",
+    "completeSelectedTooltip": "Complete selected todos",
+    "deleteSelectedTooltip": "Delete selected todos",
+    "clearCompletedTitle": "Clear completed todos",
+    "clearCompletedContent": "Delete all completed todos? This cannot be undone.",
+    "clearedCompleted": "All completed todos cleared",
+    "clearAction": "Clear",
+    "completedCount": "Completed {count} todos",
+    "deleteSelectedTitle": "Delete selected todos",
+    "deleteSelectedContent": "Delete {count} selected todos? This cannot be undone.",
+    "deletedCount": "Deleted {count} todos"
+  },
+  "group": {
+    "noteCount": "{count} notes",
+    "completed": "Completed",
+    "uncategorized": "Uncategorized"
+  },
+  "category": {
+    "chooseTitle": "Choose Category",
+    "createTitle": "Create Category",
+    "createAction": "Create Category",
+    "createNew": "Create New",
+    "addAction": "Add Category",
+    "editTitle": "Edit Category",
+    "deleteTitle": "Delete Category",
+    "deleteSubtitle": "Todos in this category will move to Uncategorized",
+    "deleteConfirmWithName": "Delete \"{name}\"?\nTodos in this category will move to Uncategorized.",
+    "nameLabel": "Category Name",
+    "nameHint": "Enter category name",
+    "colorLabel": "Category Color"
+  },
+  "tag": {
+    "chooseTitle": "Choose Tags",
+    "createTitle": "Create Tag",
+    "createAction": "Create",
+    "createNewAction": "Create New Tag",
+    "applySelection": "Apply",
+    "longPressHint": "Long press to edit/delete",
+    "editTitle": "Edit Tag",
+    "deleteTitle": "Delete Tag",
+    "deleteConfirmWithName": "Delete \"{name}\"?",
+    "nameLabel": "Tag Name",
+    "nameHint": "Enter tag name"
+  },
+  "todo": {
+    "recognizingTitle": "Transcribing...",
+    "recognizingSubtitle": "Converting speech to text",
+    "recognizingInline": "Recognizing...",
+    "failedWithError": "Failed: {error}",
+    "editAction": "Edit",
+    "setCategory": "Set Category",
+    "setReminderTime": "Set Reminder Time",
+    "clearReminderTime": "Clear Reminder Time",
+    "setDueTime": "Set Due Time",
+    "clearDueTime": "Clear Due Time",
+    "setPriority": "Set Priority",
+    "editTags": "Edit Tags",
+    "reRecordAction": "Re-record",
+    "playbackAction": "Playback",
+    "pickReminderTimeTitle": "Pick reminder time",
+    "pickDueTimeTitle": "Pick due time",
+    "clearedReminderTimeToast": "Reminder time cleared",
+    "clearedDueTimeToast": "Due time cleared",
+    "editDialogTitle": "Edit Note",
+    "editDialogHint": "Enter note text",
+    "reRecordFailed": "Re-record failed: {error}",
+    "noAudioToPlay": "No audio to play",
+    "playbackFailed": "Playback failed: {error}",
+    "deleteDialogTitle": "Delete Note",
+    "deleteDialogContent": "Are you sure you want to delete this note?"
+  }
+}

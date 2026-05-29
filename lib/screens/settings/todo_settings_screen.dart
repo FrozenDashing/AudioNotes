@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_i18n.dart';
 import '../../models/todo_priority.dart';
 import '../../providers/settings_provider.dart';
 
@@ -15,13 +16,13 @@ class TodoSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('代办设置'),
+        title: Text(context.tr('settings.section.todo')),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _SectionCard(
-            title: '默认优先级',
+            title: context.tr('settings.todo.defaultPriority'),
             child: RadioGroup<TodoPriority>(
               groupValue: settings.defaultTodoPriority,
               onChanged: (value) {
@@ -36,7 +37,7 @@ class TodoSettingsScreen extends ConsumerWidget {
                 children: TodoPriority.values.map((priority) {
                   return RadioListTile<TodoPriority>(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(_priorityLabel(priority)),
+                    title: Text(_priorityLabel(context, priority)),
                     value: priority,
                   );
                 }).toList(),
@@ -45,12 +46,12 @@ class TodoSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _SectionCard(
-            title: '已完成聚合',
+            title: context.tr('settings.todo.aggregateCompleted'),
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('聚合已完成待办'),
+              title: Text(context.tr('settings.todo.aggregateCompletedTitle')),
               subtitle: Text(
-                '开启后，所有已完成待办将集中到“已完成”分组。',
+                context.tr('settings.todo.aggregateCompletedSubtitle'),
                 style: theme.textTheme.bodySmall,
               ),
               value: settings.aggregateCompletedTodos,
@@ -66,16 +67,16 @@ class TodoSettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _priorityLabel(TodoPriority p) {
+  String _priorityLabel(BuildContext context, TodoPriority p) {
     switch (p) {
       case TodoPriority.low:
-        return '低';
+        return context.tr('settings.todo.priority.low');
       case TodoPriority.normal:
-        return '普通';
+        return context.tr('settings.todo.priority.normal');
       case TodoPriority.high:
-        return '高';
+        return context.tr('settings.todo.priority.high');
       case TodoPriority.urgent:
-        return '紧急';
+        return context.tr('settings.todo.priority.urgent');
     }
   }
 }

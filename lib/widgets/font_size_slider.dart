@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_i18n.dart';
 import '../models/settings_state.dart';
 
 /// Widget for selecting font size with preset options and custom slider
@@ -49,11 +50,20 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
         // Preset font size options
         Row(
           children: [
-            _buildFontSizeOption('小', FontSizeOption.small),
+            _buildFontSizeOption(
+              context.tr('fontSizePicker.small'),
+              FontSizeOption.small,
+            ),
             const Spacer(),
-            _buildFontSizeOption('中', FontSizeOption.medium),
+            _buildFontSizeOption(
+              context.tr('fontSizePicker.medium'),
+              FontSizeOption.medium,
+            ),
             const Spacer(),
-            _buildFontSizeOption('大', FontSizeOption.large),
+            _buildFontSizeOption(
+              context.tr('fontSizePicker.large'),
+              FontSizeOption.large,
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -61,7 +71,7 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
         // Custom font size slider
         Row(
           children: [
-            const Text('自定义'),
+            Text(context.tr('fontSizePicker.custom')),
             const Spacer(),
             Text('${(_customScale * 100).round()}%'),
           ],
@@ -85,7 +95,7 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
         // Follow system font size option
         Row(
           children: [
-            const Text('跟随系统字体大小'),
+            Text(context.tr('fontSizePicker.followSystem')),
             const Spacer(),
             Switch(
               value: widget.followSystemFontSize,
@@ -98,7 +108,8 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
 
         // Font size preview
         const SizedBox(height: 16),
-        const Text('预览:', style: TextStyle(fontSize: 14)),
+        Text(context.tr('fontSizePicker.preview'),
+            style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
@@ -110,7 +121,7 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '字号预览',
+                context.tr('fontSizePicker.titlePreview'),
                 style: TextStyle(
                   fontSize: 16 * _customScale,
                   fontWeight: FontWeight.bold,
@@ -118,14 +129,14 @@ class _FontSizeSliderState extends State<FontSizeSlider> {
               ),
               const SizedBox(height: 8),
               Text(
-                '这是一个待办事项示例',
+                context.tr('fontSizePicker.todoPreview'),
                 style: TextStyle(
                   fontSize: 14 * _customScale,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                '已完成的待办事项',
+                context.tr('fontSizePicker.completedPreview'),
                 style: TextStyle(
                   fontSize: 14 * _customScale,
                   decoration: TextDecoration.lineThrough,

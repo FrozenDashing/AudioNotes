@@ -12,14 +12,14 @@ class ModelRepository {
     return [
       const ModelMetadata(
         modelId: 'vosk-model-small-cn-0.22',
-        name: '中文轻量模型',
+        name: 'Chinese Small Model',
         sizeBytes: 45 * 1024 * 1024,
         version: '0.22',
         accuracyTag: 'low-latency',
       ),
       const ModelMetadata(
         modelId: 'vosk-model-cn-0.22',
-        name: '中文高精度模型',
+        name: 'Chinese High Accuracy Model',
         sizeBytes: 1800 * 1024 * 1024,
         version: '0.22',
         accuracyTag: 'high-accuracy',

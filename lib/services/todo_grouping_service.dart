@@ -66,6 +66,8 @@ class TodoGroupingService {
     required List<Category> categories,
     required TodoSortField sortField,
     required SortDirection direction,
+    String completedLabel = 'Completed',
+    String uncategorizedLabel = 'Uncategorized',
     bool aggregateCompletedTodos = false,
     Map<String, int> groupOrderMap = const {},
   }) {
@@ -101,8 +103,10 @@ class TodoGroupingService {
       return TodoGroup(
         groupKey: groupKey,
         title: isCompletedAggregate
-            ? '已完成'
-            : (isUncategorized ? '未分类' : (category?.name ?? '未分类')),
+            ? completedLabel
+            : (isUncategorized
+                ? uncategorizedLabel
+                : (category?.name ?? uncategorizedLabel)),
         categoryId:
             (isUncategorized || isCompletedAggregate) ? null : category?.id,
         color: isCompletedAggregate

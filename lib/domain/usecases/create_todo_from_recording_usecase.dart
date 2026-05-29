@@ -26,13 +26,14 @@ class CreateTodoFromRecordingUseCase {
   Future<void> execute() async {
     String? wavPath;
     String? todoId;
+    bool autoRemoveTrailingPeriod = false;
 
     try {
       // Step 1: Stop recording and get WAV file path
       wavPath = await _recorder.stopRecording();
 
       if (wavPath == null || wavPath.isEmpty) {
-        throw Exception('录音文件生成失败');
+        throw Exception('error.recordingFileGenerationFailed');
       }
 
       // Step 2: Insert todo in recognizing state
@@ -41,6 +42,7 @@ class CreateTodoFromRecordingUseCase {
         try {
           final settings = await _settingsRepository!.loadSettings();
           priority = settings.defaultTodoPriority;
+          autoRemoveTrailingPeriod = settings.autoRemoveTrailingPeriod;
         } catch (_) {}
       }
 
@@ -54,11 +56,15 @@ class CreateTodoFromRecordingUseCase {
       String? text = await _recognition.recognize(wavPath);
 
       if (text == null || text.isEmpty) {
-        throw Exception('未能识别语音内容');
+        throw Exception('error.speechRecognitionFailed');
       }
 
       // ✅ Clean up extra spaces: replace multiple consecutive spaces with single space and trim
       text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      if (autoRemoveTrailingPeriod) {
+        text = text.replaceFirst(RegExp(r'[。.]$'), '');
+      }
 
       // Step 4: Complete recognition successfully with heuristic confidence
       double computeConfidence(String t) {

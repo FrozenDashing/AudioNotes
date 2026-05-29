@@ -1,0 +1,244 @@
+{
+  "app": {
+    "title": "语记"
+  },
+  "common": {
+    "enabled": "开启",
+    "disabled": "关闭",
+    "auto": "自动",
+    "manual": "手动",
+    "cancel": "取消",
+    "save": "保存",
+    "confirm": "确定",
+    "delete": "删除",
+    "download": "下载",
+    "setAsCurrent": "设为当前",
+    "version": "版本"
+  },
+  "settings": {
+    "title": "设置",
+    "restoreDefaults": "恢复默认",
+    "section": {
+      "general": "通用设置",
+      "appearance": "外观设置",
+      "todo": "代办设置",
+      "voice": "语音设置"
+    },
+    "general": {
+      "title": "通用设置",
+      "language": "语言",
+      "languageSubtitle": "切换应用显示语言",
+      "langZhCn": "简体中文",
+      "langEn": "English"
+    },
+    "appearance": {
+      "themeColor": "主题色",
+      "fontSize": "字号",
+      "themeMode": {
+        "system": "跟随系统",
+        "light": "浅色",
+        "dark": "深色",
+        "custom": "自定义"
+      },
+      "fontSizeOption": {
+        "small": "小",
+        "medium": "中",
+        "large": "大",
+        "custom": "自定义"
+      }
+    },
+    "todo": {
+      "defaultPriority": "默认优先级",
+      "aggregateCompleted": "已完成聚合",
+      "aggregateCompletedTitle": "聚合已完成待办",
+      "aggregateCompletedSubtitle": "开启后，所有已完成待办将集中到“已完成”分组。",
+      "priority": {
+        "low": "低",
+        "normal": "普通",
+        "high": "高",
+        "urgent": "紧急"
+      },
+      "sort": {
+        "manual": "手动顺序",
+        "createdAt": "创建时间",
+        "dueAt": "截止时间",
+        "priority": "优先级",
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "voice": {
+      "model": "语音模型",
+      "currentAuto": "当前：自动选择",
+      "currentManualPrefix": "当前：",
+      "manageModel": "管理模型",
+      "manageModelSubtitle": "下载、选择或删除语音识别模型",
+      "autoSelectModel": "自动选择模型",
+      "autoSelectModelSubtitle": "开启后系统会自动使用可用模型。",
+      "autoRemoveTrailingPeriod": "自动去除句尾句号",
+      "autoRemoveTrailingPeriodSubtitle": "开启后识别结果会自动去掉最后的。或.。"
+    },
+    "summary": {
+      "fontSize": "字号",
+      "theme": "主题色",
+      "defaultPriority": "默认优先级",
+      "completedAggregation": "已完成聚合",
+      "sort": "排序",
+      "model": "模型",
+      "trailingPeriodRemoval": "句尾句号去除",
+      "autoSelect": "自动选择"
+    }
+  },
+  "themePicker": {
+    "default": "默认",
+    "blue": "蓝色",
+    "warmOrange": "暖橙",
+    "deepGreen": "深绿",
+    "followSystem": "跟随系统",
+    "customColor": "自定义颜色",
+    "preview": "预览:",
+    "themePreview": "主题色预览",
+    "todoExample": "待办项示例",
+    "dialogTitle": "选择主题色"
+  },
+  "fontSizePicker": {
+    "small": "小",
+    "medium": "中",
+    "large": "大",
+    "custom": "自定义",
+    "followSystem": "跟随系统字体大小",
+    "preview": "预览:",
+    "titlePreview": "字号预览",
+    "todoPreview": "这是一个待办事项示例",
+    "completedPreview": "已完成的待办事项"
+  },
+  "model": {
+    "selectVoiceModel": "选择语音模型",
+    "noModels": "暂无可用模型",
+    "downloadComplete": "模型下载完成",
+    "downloadFailedPrefix": "下载失败",
+    "downloadModel": "下载模型",
+    "deleteModel": "删除模型",
+    "deleteModelConfirm": "确认删除此语音识别模型？",
+    "modelDeleted": "模型已删除",
+    "downloadFirst": "请先下载模型",
+    "lowLatency": "低延迟",
+    "highAccuracy": "高精度",
+    "errorPrefix": "错误"
+  },
+  "home": {
+    "sort": {
+      "title": "排序",
+      "field": "排序字段",
+      "direction": "排序方向",
+      "apply": "应用"
+    },
+    "selection": {
+      "title": "选择",
+      "exit": "退出选择",
+      "selectAll": "全选",
+      "clearAll": "全不选"
+    },
+    "menu": {
+      "more": "更多"
+    },
+    "empty": {
+      "title": "暂无笔记",
+      "subtitle": "点击麦克风开始录音"
+    },
+    "record": {
+      "start": "录音",
+      "stop": "停止",
+      "processing": "处理中...",
+      "startFailed": "开始录音失败: {error}"
+    },
+    "model": {
+      "notDownloadedTitle": "语音包未下载",
+      "notDownloadedSubtitle": "需要下载中文语音包才能使用语音识别功能",
+      "downloadPack": "下载语音包",
+      "downloadFirst": "请先下载语音包",
+      "downloadingPack": "正在下载中文语音包 ({size} MB)...",
+      "downloadingProgress": "下载中... {percent}%",
+      "extractingProgress": "解压中... {percent}%",
+      "done": "完成!",
+      "ready": "语音包已就绪!",
+      "downloadFailed": "下载失败: {error}",
+      "dialogIntro": "需要下载中文语音包才能实现离线语音识别。",
+      "smallModelHint": "• 小型模型: ~45 MB (推荐)",
+      "largeModelHint": "• 大型模型: ~1.8 GB (更高准确率)",
+      "downloadSmallModel": "下载小型模型"
+    }
+  },
+  "toolbar": {
+    "clearCompletedTooltip": "清除所有已完成待办",
+    "completeSelectedTooltip": "完成选中的待办",
+    "deleteSelectedTooltip": "删除选中的待办",
+    "clearCompletedTitle": "清除已完成待办",
+    "clearCompletedContent": "确定要删除所有已完成的待办吗？此操作不可恢复。",
+    "clearedCompleted": "已清除所有已完成待办",
+    "clearAction": "清除",
+    "completedCount": "已完成 {count} 个待办",
+    "deleteSelectedTitle": "删除选中待办",
+    "deleteSelectedContent": "确定要删除选中的 {count} 个待办吗？此操作不可恢复。",
+    "deletedCount": "已删除 {count} 个待办"
+  },
+  "group": {
+    "noteCount": "{count} 条笔记",
+    "completed": "已完成",
+    "uncategorized": "未分类"
+  },
+  "category": {
+    "chooseTitle": "选择分类",
+    "createTitle": "创建分类",
+    "createAction": "创建分类",
+    "createNew": "新建分类",
+    "addAction": "添加分类",
+    "editTitle": "编辑分类",
+    "deleteTitle": "删除分类",
+    "deleteSubtitle": "该分类下待办将移动到未分类",
+    "deleteConfirmWithName": "确定删除“{name}”？\n该分类下的待办将移动到未分类。",
+    "nameLabel": "分类名称",
+    "nameHint": "输入分类名称",
+    "colorLabel": "分类颜色"
+  },
+  "tag": {
+    "chooseTitle": "选择标签",
+    "createTitle": "创建标签",
+    "createAction": "创建",
+    "createNewAction": "新建标签",
+    "applySelection": "应用",
+    "longPressHint": "长按编辑/删除",
+    "editTitle": "编辑标签",
+    "deleteTitle": "删除标签",
+    "deleteConfirmWithName": "确定删除“{name}”？",
+    "nameLabel": "标签名称",
+    "nameHint": "输入标签名称"
+  },
+  "todo": {
+    "recognizingTitle": "转录中...",
+    "recognizingSubtitle": "正在将语音转换为文字",
+    "recognizingInline": "识别中...",
+    "failedWithError": "失败: {error}",
+    "editAction": "编辑",
+    "setCategory": "设置分类",
+    "setReminderTime": "设置提醒时间",
+    "clearReminderTime": "清除提醒时间",
+    "setDueTime": "设置截止时间",
+    "clearDueTime": "清除截止时间",
+    "setPriority": "设置优先级",
+    "editTags": "编辑标签",
+    "reRecordAction": "重录",
+    "playbackAction": "播放",
+    "pickReminderTimeTitle": "选择提醒时间",
+    "pickDueTimeTitle": "选择截止时间",
+    "clearedReminderTimeToast": "已清除提醒时间",
+    "clearedDueTimeToast": "已清除截止时间",
+    "editDialogTitle": "编辑笔记",
+    "editDialogHint": "输入笔记文本",
+    "reRecordFailed": "重录失败: {error}",
+    "noAudioToPlay": "没有可播放的音频",
+    "playbackFailed": "播放失败: {error}",
+    "deleteDialogTitle": "删除笔记",
+    "deleteDialogContent": "确定要删除这条笔记吗？"
+  }
+}

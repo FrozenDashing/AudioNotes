@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../providers/settings_provider.dart';
 import '../models/model_metadata.dart';
 import '../repositories/model_repository.dart';
@@ -35,7 +36,7 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('选择语音模型'),
+        title: Text(context.tr('model.selectVoiceModel')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -49,14 +50,17 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child:
+                  Text('${context.tr('model.errorPrefix')}: ${snapshot.error}'),
+            );
           }
 
           final models = snapshot.data ?? [];
 
           if (models.isEmpty) {
-            return const Center(
-              child: Text('暂无可用模型'),
+            return Center(
+              child: Text(context.tr('model.noModels')),
             );
           }
 
@@ -116,7 +120,7 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
                   _modelsFuture = _loadModels();
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('模型下载完成')),
+                  SnackBar(content: Text(context.tr('model.downloadComplete'))),
                 );
               }
             }
@@ -125,7 +129,9 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
             if (context.mounted) {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('下载失败: $e')),
+                SnackBar(
+                    content: Text(
+                        '${context.tr('model.downloadFailedPrefix')}: $e')),
               );
             }
           });
@@ -135,7 +141,7 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
 
         return StatefulBuilder(builder: (context, setState) {
           return AlertDialog(
-            title: Text('下载模型：${model.name}'),
+            title: Text('${context.tr('model.downloadModel')}: ${model.name}'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -158,7 +164,7 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
                   } catch (_) {}
                   if (context.mounted) Navigator.pop(context);
                 },
-                child: const Text('取消'),
+                child: Text(context.tr('common.cancel')),
               ),
             ],
           );
@@ -171,12 +177,12 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除模型'),
-        content: const Text('确认删除此语音识别模型？'),
+        title: Text(context.tr('model.deleteModel')),
+        content: Text(context.tr('model.deleteModelConfirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(context.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () async {
@@ -197,10 +203,10 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
 
               navigator.pop();
               messenger.showSnackBar(
-                const SnackBar(content: Text('模型已删除')),
+                SnackBar(content: Text(context.tr('model.modelDeleted'))),
               );
             },
-            child: const Text('删除'),
+            child: Text(context.tr('common.delete')),
           ),
         ],
       ),
@@ -214,7 +220,7 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先下载模型')),
+        SnackBar(content: Text(context.tr('model.downloadFirst'))),
       );
       return;
     }
@@ -268,7 +274,7 @@ class ModelCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '版本: ${model.version}',
+                        '${context.tr('common.version')}: ${model.version}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -314,7 +320,7 @@ class ModelCard extends StatelessWidget {
                               color: theme.colorScheme.primary,
                             ),
                             const SizedBox(width: 10),
-                            const Text('设为当前'),
+                            Text(context.tr('common.setAsCurrent')),
                           ],
                         ),
                       ));
@@ -332,7 +338,7 @@ class ModelCard extends StatelessWidget {
                               color: theme.colorScheme.primary,
                             ),
                             const SizedBox(width: 10),
-                            const Text('下载'),
+                            Text(context.tr('common.download')),
                           ],
                         ),
                       ));
@@ -351,7 +357,7 @@ class ModelCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              '删除',
+                              context.tr('common.delete'),
                               style: TextStyle(
                                 color: theme.colorScheme.error,
                               ),
@@ -390,7 +396,7 @@ class ModelCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  _getPerformanceLabel(model.accuracyTag),
+                  _getPerformanceLabel(context, model.accuracyTag),
                   style: TextStyle(
                     fontSize: 12,
                     color: _getPerformanceColor(model.accuracyTag),
@@ -432,12 +438,12 @@ class ModelCard extends StatelessWidget {
     return Colors.grey;
   }
 
-  String _getPerformanceLabel(String accuracyTag) {
+  String _getPerformanceLabel(BuildContext context, String accuracyTag) {
     if (accuracyTag.toLowerCase().contains('speed') ||
         accuracyTag.toLowerCase().contains('latency')) {
-      return '低延迟';
+      return context.tr('model.lowLatency');
     } else if (accuracyTag.toLowerCase().contains('accuracy')) {
-      return '高精度';
+      return context.tr('model.highAccuracy');
     }
     return accuracyTag;
   }

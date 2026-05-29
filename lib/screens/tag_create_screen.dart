@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 
 class TagCreateScreen extends ConsumerStatefulWidget {
@@ -21,16 +22,16 @@ class _TagCreateScreenState extends ConsumerState<TagCreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Tag')),
+      appBar: AppBar(title: Text(context.tr('tag.createTitle'))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Tag name',
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: context.tr('tag.nameHint'),
               ),
             ),
             const SizedBox(height: 12),
@@ -39,7 +40,7 @@ class _TagCreateScreenState extends ConsumerState<TagCreateScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(context.tr('common.cancel')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -55,7 +56,7 @@ class _TagCreateScreenState extends ConsumerState<TagCreateScreen> {
                       if (!mounted) return;
                       navigator.pop(tag);
                     },
-                    child: const Text('Create'),
+                    child: Text(context.tr('tag.createAction')),
                   ),
                 ),
               ],

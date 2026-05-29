@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 
 class CategoryCreateScreen extends ConsumerStatefulWidget {
@@ -41,7 +42,7 @@ class _CategoryCreateScreenState extends ConsumerState<CategoryCreateScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create new category'),
+        title: Text(context.tr('category.createTitle')),
       ),
       body: SafeArea(
         child: Padding(
@@ -50,20 +51,20 @@ class _CategoryCreateScreenState extends ConsumerState<CategoryCreateScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Category name:',
+                context.tr('category.nameLabel'),
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  hintText: 'Category name',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: context.tr('category.nameHint'),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Category color:',
+                context.tr('category.colorLabel'),
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -98,7 +99,7 @@ class _CategoryCreateScreenState extends ConsumerState<CategoryCreateScreen> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(context.tr('common.cancel')),
                   ),
                   const Spacer(),
                   ElevatedButton(
@@ -113,7 +114,7 @@ class _CategoryCreateScreenState extends ConsumerState<CategoryCreateScreen> {
                       if (!mounted) return;
                       navigator.pop(category);
                     },
-                    child: const Text('Create Category'),
+                    child: Text(context.tr('category.createAction')),
                   ),
                 ],
               ),

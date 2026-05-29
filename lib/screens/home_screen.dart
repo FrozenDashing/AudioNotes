@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 import '../models/todo_item.dart';
 // category model no longer needed here (groups derived via providers)
@@ -47,13 +48,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '排序',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  context.tr('home.sort.title'),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '排序字段',
+                  context.tr('home.sort.field'),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -76,13 +78,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                     child: Column(
                       children: [
-                        const RadioListTile<TodoSortField>(
+                        RadioListTile<TodoSortField>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('手动顺序'),
+                          title: Text(context.tr('settings.todo.sort.manual')),
                           value: TodoSortField.manual,
                         ),
                         Divider(
@@ -90,13 +92,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           thickness: 1,
                           color: theme.colorScheme.outlineVariant,
                         ),
-                        const RadioListTile<TodoSortField>(
+                        RadioListTile<TodoSortField>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('创建时间'),
+                          title:
+                              Text(context.tr('settings.todo.sort.createdAt')),
                           value: TodoSortField.createdAt,
                         ),
                         Divider(
@@ -104,13 +107,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           thickness: 1,
                           color: theme.colorScheme.outlineVariant,
                         ),
-                        const RadioListTile<TodoSortField>(
+                        RadioListTile<TodoSortField>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('截止时间'),
+                          title: Text(context.tr('settings.todo.sort.dueAt')),
                           value: TodoSortField.dueAt,
                         ),
                         Divider(
@@ -118,13 +121,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           thickness: 1,
                           color: theme.colorScheme.outlineVariant,
                         ),
-                        const RadioListTile<TodoSortField>(
+                        RadioListTile<TodoSortField>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('优先级'),
+                          title:
+                              Text(context.tr('settings.todo.sort.priority')),
                           value: TodoSortField.priority,
                         ),
                       ],
@@ -133,7 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '排序方向',
+                  context.tr('home.sort.direction'),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -156,13 +160,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                     child: Column(
                       children: [
-                        const RadioListTile<SortDirection>(
+                        RadioListTile<SortDirection>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('升序'),
+                          title: Text(context.tr('settings.todo.sort.asc')),
                           value: SortDirection.asc,
                         ),
                         Divider(
@@ -170,13 +174,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           thickness: 1,
                           color: theme.colorScheme.outlineVariant,
                         ),
-                        const RadioListTile<SortDirection>(
+                        RadioListTile<SortDirection>(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                           ),
-                          title: Text('降序'),
+                          title: Text(context.tr('settings.todo.sort.desc')),
                           value: SortDirection.desc,
                         ),
                       ],
@@ -209,7 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               .read(todoListProvider.notifier)
                               .setQueryOptions(options);
                         },
-                        child: const Text('应用'),
+                        child: Text(context.tr('home.sort.apply')),
                       ),
                     ),
                   ],
@@ -319,7 +323,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         leading: isSelectionMode
             ? IconButton(
                 icon: Icon(allSelected ? Icons.check_box : Icons.select_all),
-                tooltip: allSelected ? '全不选' : '全选',
+                tooltip: allSelected
+                    ? context.tr('home.selection.clearAll')
+                    : context.tr('home.selection.selectAll'),
                 onPressed: () {
                   if (allSelected) {
                     todoNotifier.clearSelection();
@@ -330,7 +336,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             : PopupMenuButton<_HomeMenuAction>(
                 icon: const Icon(Icons.more_horiz),
-                tooltip: '更多',
+                tooltip: context.tr('home.menu.more'),
                 position: PopupMenuPosition.under,
                 offset: const Offset(0, 8),
                 elevation: 10,
@@ -360,7 +366,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 10),
-                        const Text('排序'),
+                        Text(context.tr('home.sort.title')),
                       ],
                     ),
                   ),
@@ -374,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 10),
-                        const Text('选择'),
+                        Text(context.tr('home.selection.title')),
                       ],
                     ),
                   ),
@@ -384,7 +390,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (isSelectionMode)
             IconButton(
               icon: const Icon(Icons.close),
-              tooltip: '退出选择',
+              tooltip: context.tr('home.selection.exit'),
               onPressed: () => todoNotifier.disableSelectionMode(),
             )
           else
@@ -434,16 +440,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           color: Colors.blue,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          '语音包未下载',
-                          style: TextStyle(
+                        Text(
+                          context.tr('home.model.notDownloadedTitle'),
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '需要下载中文语音包才能使用语音识别功能',
+                          context.tr('home.model.notDownloadedSubtitle'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
@@ -454,7 +460,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ElevatedButton.icon(
                           onPressed: _showModelDownloadDialog,
                           icon: const Icon(Icons.download),
-                          label: const Text('下载语音包'),
+                          label: Text(context.tr('home.model.downloadPack')),
                         ),
                       ],
                     ),
@@ -596,7 +602,7 @@ class _TodoListContent extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '暂无笔记',
+            context.tr('home.empty.title'),
             style: TextStyle(
               fontSize: 20,
               color: Theme.of(context).colorScheme.onSurface,
@@ -604,7 +610,7 @@ class _TodoListContent extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '点击麦克风开始录音',
+            context.tr('home.empty.subtitle'),
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -655,10 +661,12 @@ class _RecordingFAB extends ConsumerWidget {
       onPressed: _getOnPressed(recordingState, ref, context),
       label: Text(
         recordingState == RecordingState.idle
-            ? (isModelReady ? '录音' : '请先下载语音包')
+            ? (isModelReady
+                ? context.tr('home.record.start')
+                : context.tr('home.model.downloadFirst'))
             : recordingState == RecordingState.recording
-                ? '停止'
-                : '处理中...',
+                ? context.tr('home.record.stop')
+                : context.tr('home.record.processing'),
       ),
       icon: Icon(
         recordingState == RecordingState.idle ? Icons.mic : Icons.stop,
@@ -697,7 +705,10 @@ class _RecordingFAB extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('开始录音失败: $error'),
+            content: Text(
+              context.tr('home.record.startFailed',
+                  params: {'error': error.toString()}),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -747,24 +758,33 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
       final model = VoskModel.chineseSmall();
 
       setState(() {
-        _status = '正在下载中文语音包 (${model.sizeMB} MB)...';
+        _status = context.tr(
+          'home.model.downloadingPack',
+          params: {'size': model.sizeMB.toStringAsFixed(0)},
+        );
       });
 
       await for (final progress in widget.modelManager.downloadModel(model)) {
         setState(() {
           _progress = progress;
           if (progress < 0.7) {
-            _status = '下载中... ${(progress * 100).toStringAsFixed(0)}%';
+            _status = context.tr(
+              'home.model.downloadingProgress',
+              params: {'percent': (progress * 100).toStringAsFixed(0)},
+            );
           } else if (progress < 0.95) {
-            _status = '解压中... ${(progress * 100).toStringAsFixed(0)}%';
+            _status = context.tr(
+              'home.model.extractingProgress',
+              params: {'percent': (progress * 100).toStringAsFixed(0)},
+            );
           } else {
-            _status = '完成!';
+            _status = context.tr('home.model.done');
           }
         });
       }
 
       setState(() {
-        _status = '语音包已就绪！';
+        _status = context.tr('home.model.ready');
       });
 
       // Reload the actual recognition plugin so newly downloaded models are used immediately
@@ -780,7 +800,8 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
       }
     } catch (e) {
       setState(() {
-        _error = '下载失败: $e';
+        _error = context
+            .tr('home.model.downloadFailed', params: {'error': e.toString()});
         _isDownloading = false;
       });
     }
@@ -789,25 +810,25 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('下载语音包'),
+      title: Text(context.tr('home.model.downloadPack')),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '需要下载中文语音包才能实现离线语音识别。',
-              style: TextStyle(fontSize: 14),
+            Text(
+              context.tr('home.model.dialogIntro'),
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '• 小型模型: ~45 MB (推荐)',
-              style: TextStyle(fontSize: 13),
+            Text(
+              context.tr('home.model.smallModelHint'),
+              style: const TextStyle(fontSize: 13),
             ),
-            const Text(
-              '• 大型模型: ~1.8 GB (更高准确率)',
-              style: TextStyle(fontSize: 13),
+            Text(
+              context.tr('home.model.largeModelHint'),
+              style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 16),
             if (_isDownloading || _progress > 0) ...[
@@ -832,13 +853,13 @@ class _ModelDownloadDialogState extends State<_ModelDownloadDialog> {
         if (!_isDownloading)
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(context.tr('common.cancel')),
           ),
         if (!_isDownloading)
           ElevatedButton.icon(
             onPressed: _downloadModel,
             icon: const Icon(Icons.download),
-            label: const Text('下载小型模型'),
+            label: Text(context.tr('home.model.downloadSmallModel')),
           ),
         if (_isDownloading) const CircularProgressIndicator(),
       ],

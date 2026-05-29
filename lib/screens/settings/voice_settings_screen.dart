@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_i18n.dart';
 import '../../providers/settings_provider.dart';
 import '../model_selection_screen.dart';
 
@@ -15,7 +16,7 @@ class VoiceSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('语音设置'),
+        title: Text(context.tr('settings.section.voice')),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -29,21 +30,24 @@ class VoiceSettingsScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.model_training_outlined),
-                  title: const Text('语音模型'),
+                  title: Text(context.tr('settings.voice.model')),
                   subtitle: Text(
                     settings.autoModelSelect
-                        ? '当前：自动选择'
-                        : '当前：${settings.currentModelId}',
+                        ? context.tr('settings.voice.currentAuto')
+                        : '${context.tr('settings.voice.currentManualPrefix')}${settings.currentModelId}',
                   ),
                   trailing: Chip(
-                    label: Text(settings.autoModelSelect ? '自动' : '手动'),
+                    label: Text(settings.autoModelSelect
+                        ? context.tr('common.auto')
+                        : context.tr('common.manual')),
                   ),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.manage_search_outlined),
-                  title: const Text('管理模型'),
-                  subtitle: const Text('下载、选择或删除语音识别模型'),
+                  title: Text(context.tr('settings.voice.manageModel')),
+                  subtitle:
+                      Text(context.tr('settings.voice.manageModelSubtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
@@ -56,13 +60,29 @@ class VoiceSettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
-                  title: const Text('自动选择模型'),
-                  subtitle: const Text('开启后系统会自动使用可用模型。'),
+                  title: Text(context.tr('settings.voice.autoSelectModel')),
+                  subtitle: Text(
+                      context.tr('settings.voice.autoSelectModelSubtitle')),
                   value: settings.autoModelSelect,
                   onChanged: (value) {
                     ref
                         .read(settingsProvider.notifier)
                         .setAutoModelSelect(value);
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: Text(
+                      context.tr('settings.voice.autoRemoveTrailingPeriod')),
+                  subtitle: Text(
+                    context
+                        .tr('settings.voice.autoRemoveTrailingPeriodSubtitle'),
+                  ),
+                  value: settings.autoRemoveTrailingPeriod,
+                  onChanged: (value) {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .setAutoRemoveTrailingPeriod(value);
                   },
                 ),
               ],
