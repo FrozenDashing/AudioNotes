@@ -76,7 +76,12 @@ class WebDavClientWrapper {
       await _client!.readProps(remotePath);
       return true;
     } catch (e) {
-      return false;
+      try {
+        final files = await _client!.readDir(_remoteDir);
+        return files.any((entry) => entry.path?.split('/').last == filename);
+      } catch (_) {
+        return false;
+      }
     }
   }
 

@@ -23,13 +23,13 @@ class WebDavRemoteStore {
   // ---- Manifest ----
 
   Future<SyncManifest?> loadManifest() async {
+    final exists = await _client.fileExists(_manifestFile);
+    if (!exists) return null;
     try {
-      final exists = await _client.fileExists(_manifestFile);
-      if (!exists) return null;
       final content = await _client.downloadFile(_manifestFile);
       return _serializer.deserializeManifest(content);
     } catch (e) {
-      return null;
+      throw StateError('Failed to load remote manifest: $e');
     }
   }
 
@@ -41,13 +41,13 @@ class WebDavRemoteStore {
   // ---- Todos ----
 
   Future<Map<String, TodoSyncDto>> loadTodos() async {
+    final exists = await _client.fileExists(_todosFile);
+    if (!exists) return {};
     try {
-      final exists = await _client.fileExists(_todosFile);
-      if (!exists) return {};
       final content = await _client.downloadFile(_todosFile);
       return _serializer.deserializeTodos(content);
     } catch (e) {
-      return {};
+      throw StateError('Failed to load remote todos: $e');
     }
   }
 
@@ -59,13 +59,13 @@ class WebDavRemoteStore {
   // ---- Categories ----
 
   Future<Map<String, CategorySyncDto>> loadCategories() async {
+    final exists = await _client.fileExists(_categoriesFile);
+    if (!exists) return {};
     try {
-      final exists = await _client.fileExists(_categoriesFile);
-      if (!exists) return {};
       final content = await _client.downloadFile(_categoriesFile);
       return _serializer.deserializeCategories(content);
     } catch (e) {
-      return {};
+      throw StateError('Failed to load remote categories: $e');
     }
   }
 
@@ -77,13 +77,13 @@ class WebDavRemoteStore {
   // ---- Tags ----
 
   Future<Map<String, TagSyncDto>> loadTags() async {
+    final exists = await _client.fileExists(_tagsFile);
+    if (!exists) return {};
     try {
-      final exists = await _client.fileExists(_tagsFile);
-      if (!exists) return {};
       final content = await _client.downloadFile(_tagsFile);
       return _serializer.deserializeTags(content);
     } catch (e) {
-      return {};
+      throw StateError('Failed to load remote tags: $e');
     }
   }
 
@@ -95,13 +95,13 @@ class WebDavRemoteStore {
   // ---- Reminders ----
 
   Future<Map<String, ReminderSyncDto>> loadReminders() async {
+    final exists = await _client.fileExists(_remindersFile);
+    if (!exists) return {};
     try {
-      final exists = await _client.fileExists(_remindersFile);
-      if (!exists) return {};
       final content = await _client.downloadFile(_remindersFile);
       return _serializer.deserializeReminders(content);
     } catch (e) {
-      return {};
+      throw StateError('Failed to load remote reminders: $e');
     }
   }
 

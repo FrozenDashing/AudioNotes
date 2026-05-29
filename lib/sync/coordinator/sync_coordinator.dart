@@ -70,6 +70,8 @@ class SyncCoordinator {
 
   void setConflictStrategy(ConflictStrategy strategy) {
     _conflictStrategy = strategy;
+    // Also update planner's default strategy
+    _planner.setDefaultStrategy(strategy);
   }
 
   SyncCoordinator({
@@ -138,6 +140,67 @@ class SyncCoordinator {
 
       // 4. Load baseline hashes from sync_records
       final baselineHashes = await _loadBaselineHashes(db);
+
+      final shouldBootstrapFromRemote = _shouldBootstrapFromRemote(
+        localData: localData,
+        remoteTodos: remoteTodos,
+        remoteCategories: remoteCategories,
+        remoteTags: remoteTags,
+        remoteReminders: remoteReminders,
+      );
+
+      if (shouldBootstrapFromRemote) {
+        await _applyRemoteSnapshot(
+          db,
+          remoteTodos: remoteTodos,
+          remoteCategories: remoteCategories,
+          remoteTags: remoteTags,
+          remoteReminders: remoteReminders,
+        );
+
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await _updateBaselineHashes(
+          db,
+          mergedTodos: remoteTodos,
+          mergedCategories: remoteCategories,
+          mergedTags: remoteTags,
+          mergedReminders: remoteReminders,
+          timestamp: now,
+        );
+
+        final manifest = SyncManifest(
+          lastSyncedAt: now,
+          fileHashes: {
+            'todos.json': _serializer.computeHash(
+                _serializer.serializeTodos(remoteTodos.values.toList())),
+            'categories.json': _serializer.computeHash(_serializer
+                .serializeCategories(remoteCategories.values.toList())),
+            'tags.json': _serializer.computeHash(
+                _serializer.serializeTags(remoteTags.values.toList())),
+            'reminders.json': _serializer.computeHash(_serializer
+                .serializeReminders(remoteReminders.values.toList())),
+          },
+        );
+        await _remoteStore.saveManifest(manifest);
+
+        stopwatch.stop();
+        _lastSyncTime = DateTime.now();
+        _status = SyncStatus.success;
+
+        _lastResult = SyncResult(
+          success: true,
+          uploaded: 0,
+          downloaded: remoteTodos.length +
+              remoteCategories.length +
+              remoteTags.length +
+              remoteReminders.length,
+          conflicts: 0,
+          deleted: 0,
+          duration: stopwatch.elapsed,
+        );
+
+        return _lastResult!;
+      }
 
       // 5. Compute local hashes (used for comparison, stored implicitly in local data)
       // 6. Compute remote hashes (used for comparison, stored implicitly in remote data)
@@ -299,7 +362,10 @@ class SyncCoordinator {
   /// Load all local data from database
   Future<_LocalData> _loadLocalData(Database db) async {
     // Load todos
-    final todoMaps = await db.query('todo_item');
+    final todoMaps = await db.query(
+      'todo_item',
+      where: 'deleted_at IS NULL',
+    );
     final todoItems = todoMaps.map((m) => TodoItem.fromJson(m)).toList();
 
     // Load tag associations
@@ -656,6 +722,50 @@ class SyncCoordinator {
     }
 
     await batch.commit(noResult: true);
+  }
+
+  bool _shouldBootstrapFromRemote({
+    required _LocalData localData,
+    required Map<String, TodoSyncDto> remoteTodos,
+    required Map<String, CategorySyncDto> remoteCategories,
+    required Map<String, TagSyncDto> remoteTags,
+    required Map<String, ReminderSyncDto> remoteReminders,
+  }) {
+    final localIsEmpty = localData.todos.isEmpty &&
+        localData.categories.isEmpty &&
+        localData.tags.isEmpty &&
+        localData.reminders.isEmpty;
+
+    final remoteHasData = remoteTodos.isNotEmpty ||
+        remoteCategories.isNotEmpty ||
+        remoteTags.isNotEmpty ||
+        remoteReminders.isNotEmpty;
+
+    return localIsEmpty && remoteHasData;
+  }
+
+  Future<void> _applyRemoteSnapshot(
+    Database db, {
+    required Map<String, TodoSyncDto> remoteTodos,
+    required Map<String, CategorySyncDto> remoteCategories,
+    required Map<String, TagSyncDto> remoteTags,
+    required Map<String, ReminderSyncDto> remoteReminders,
+  }) async {
+    for (final dto in remoteTodos.values) {
+      await _upsertLocalTodo(db, dto);
+    }
+
+    for (final dto in remoteCategories.values) {
+      await _upsertLocalCategory(db, dto);
+    }
+
+    for (final dto in remoteTags.values) {
+      await _upsertLocalTag(db, dto);
+    }
+
+    for (final dto in remoteReminders.values) {
+      await _upsertLocalReminder(db, dto);
+    }
   }
 
   // ---- Local DB upsert helpers ----

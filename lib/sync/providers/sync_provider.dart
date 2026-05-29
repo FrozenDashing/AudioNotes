@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/app_providers.dart';
 import '../client/webdav_client_wrapper.dart';
 import '../coordinator/sync_coordinator.dart';
 import '../planner/sync_planner.dart';
@@ -122,6 +123,13 @@ class SyncNotifier extends Notifier<SyncState> {
     state = state.copyWith(status: SyncStatus.syncing, errorMessage: null);
 
     final result = await _coordinator.syncNow();
+
+    if (result.success) {
+      ref.invalidate(todoListProvider);
+      ref.invalidate(categoryListProvider);
+      ref.invalidate(tagListProvider);
+      ref.invalidate(tagsForTodoProvider);
+    }
 
     state = state.copyWith(
       status: _coordinator.status,

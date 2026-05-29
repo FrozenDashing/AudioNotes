@@ -62,9 +62,14 @@ class SyncPlan {
 
 /// Plans sync actions by comparing local, remote, and baseline states.
 class SyncPlanner {
-  final ConflictStrategy defaultStrategy;
+  ConflictStrategy defaultStrategy;
 
   SyncPlanner({this.defaultStrategy = ConflictStrategy.latestModified});
+
+  /// Update the default conflict strategy
+  void setDefaultStrategy(ConflictStrategy strategy) {
+    defaultStrategy = strategy;
+  }
 
   /// Plan sync for a single entity type.
   /// Returns a list of planned actions.
@@ -196,7 +201,7 @@ class SyncPlanner {
       }
       // Only remote exists
       else if (localItem == null && remoteItem != null) {
-        if (baselineHash != null) {
+        if (baselineHash != null && local.isNotEmpty) {
           // Was local before → local deleted it
           items.add(SyncPlanItem(
             entityId: id,
