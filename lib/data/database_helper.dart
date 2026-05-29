@@ -12,7 +12,7 @@ import 'todo_query_builder.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   DatabaseHelper._init();
 
@@ -130,6 +130,36 @@ class DatabaseHelper {
         'CREATE UNIQUE INDEX idx_reminders_notification_id ON reminders(notification_id)');
     await db.execute(
         'CREATE INDEX idx_reminders_remind_at ON reminders(remind_at)');
+
+    // Sync records: track baseline/remote hashes and last sync time per entity
+    await db.execute('''
+      CREATE TABLE sync_records (
+        entity_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        baseline_hash TEXT,
+        remote_hash TEXT,
+        last_synced_at INTEGER,
+        PRIMARY KEY (entity_id, entity_type)
+      )
+    ''');
+
+    // Sync jobs: track pending upload/download operations and retries
+    await db.execute('''
+      CREATE TABLE sync_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        dirty_at INTEGER NOT NULL,
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT
+      )
+    ''');
+
+    await db.execute(
+        'CREATE INDEX idx_sync_jobs_entity ON sync_jobs(entity_id, entity_type)');
+    await db.execute(
+        'CREATE INDEX idx_sync_jobs_operation ON sync_jobs(operation)');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -229,6 +259,38 @@ class DatabaseHelper {
           'ALTER TABLE todo_item ADD COLUMN priority INTEGER NOT NULL DEFAULT 1');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_priority ON todo_item(priority)');
+    }
+
+    if (oldVersion < 6) {
+      // Sync records: track baseline/remote hashes and last sync time per entity
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_records (
+          entity_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          baseline_hash TEXT,
+          remote_hash TEXT,
+          last_synced_at INTEGER,
+          PRIMARY KEY (entity_id, entity_type)
+        )
+      ''');
+
+      // Sync jobs: track pending upload/download operations and retries
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_jobs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          entity_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          operation TEXT NOT NULL,
+          dirty_at INTEGER NOT NULL,
+          retry_count INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT
+        )
+      ''');
+
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sync_jobs_entity ON sync_jobs(entity_id, entity_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sync_jobs_operation ON sync_jobs(operation)');
     }
   }
 

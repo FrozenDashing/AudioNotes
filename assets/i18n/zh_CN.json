@@ -22,7 +22,8 @@
       "general": "通用设置",
       "appearance": "外观设置",
       "todo": "代办设置",
-      "voice": "语音设置"
+      "voice": "语音设置",
+      "sync": "云同步"
     },
     "general": {
       "title": "通用设置",
@@ -86,7 +87,51 @@
       "sort": "排序",
       "model": "模型",
       "trailingPeriodRemoval": "句尾句号去除",
-      "autoSelect": "自动选择"
+      "autoSelect": "自动选择",
+      "syncStatus": "同步"
+    },
+    "sync": {
+      "title": "云同步",
+      "connection": "WebDAV 连接",
+      "url": "服务器地址",
+      "username": "用户名",
+      "password": "密码",
+      "remoteDir": "远程目录",
+      "urlRequired": "请输入服务器地址",
+      "urlInvalid": "地址须以 http 开头",
+      "usernameRequired": "请输入用户名",
+      "passwordRequired": "请输入密码",
+      "testConnection": "测试连接",
+      "saveConfig": "保存配置",
+      "connectionSuccess": "连接成功",
+      "connectionFailed": "连接失败",
+      "configSaved": "配置已保存",
+      "configSaveFailed": "保存配置失败",
+      "syncActions": "同步操作",
+      "syncNow": "立即同步",
+      "syncing": "同步中...",
+      "syncComplete": "同步完成",
+      "syncFailed": "同步失败",
+      "success": "成功",
+      "failed": "失败",
+      "lastSync": "上次同步",
+      "result": "结果",
+      "disconnect": "断开连接",
+      "disconnectConfirm": "确定断开 WebDAV 连接？本地数据将保留。",
+      "syncSettings": "同步设置",
+      "autoSync": "自动同步",
+      "autoSyncSubtitle": "定期将数据同步到云端",
+      "syncOnStartup": "启动时同步",
+      "syncOnStartupSubtitle": "应用启动时自动同步",
+      "interval": "同步间隔",
+      "minutes": "分钟",
+      "conflictStrategy": "冲突策略",
+      "conflict": {
+        "localWins": "本地优先",
+        "remoteWins": "远端优先",
+        "latestModified": "最近修改优先",
+        "manual": "手动解决"
+      }
     }
   },
   "themePicker": {
