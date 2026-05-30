@@ -21,9 +21,22 @@ class QuickRecordWidgetProvider : AppWidgetProvider() {
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
             appWidgetManager.updateAppWidget(
                 appWidgetId,
-                buildRemoteViews(context, options),
+                buildRemoteViews(context, options, appWidgetId),
             )
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        appWidgetManager.updateAppWidget(
+            appWidgetId,
+            buildRemoteViews(context, newOptions, appWidgetId),
+        )
     }
 
     override fun onEnabled(context: Context) {
@@ -42,24 +55,27 @@ class QuickRecordWidgetProvider : AppWidgetProvider() {
             appWidgetIds.forEach { appWidgetId ->
                 manager.updateAppWidget(
                     appWidgetId,
-                    buildRemoteViews(context, manager.getAppWidgetOptions(appWidgetId)),
+                    buildRemoteViews(context, manager.getAppWidgetOptions(appWidgetId), appWidgetId),
                 )
             }
         }
 
-        private fun buildRemoteViews(context: Context, options: Bundle?): RemoteViews {
-            val views = RemoteViews(context.packageName, layoutFor(options))
+        private fun buildRemoteViews(context: Context, options: Bundle?, appWidgetId: Int): RemoteViews {
+            val layout = layoutFor(options)
+            val views = RemoteViews(context.packageName, layout)
             val pendingIntent = PendingIntent.getActivity(
                 context,
-                1001,
+                appWidgetId,
                 launchIntent(context),
                 pendingIntentFlags(),
             )
 
             views.setOnClickPendingIntent(R.id.quick_record_root, pendingIntent)
-            views.setTextViewText(R.id.quick_record_title, context.getString(R.string.widget_quick_record_title))
-            views.setTextViewText(R.id.quick_record_subtitle, context.getString(R.string.widget_quick_record_subtitle))
-            views.setTextViewText(R.id.quick_record_hint, context.getString(R.string.widget_quick_record_hint))
+            if (layout != R.layout.widget_quick_record_compact) {
+                views.setTextViewText(R.id.quick_record_title, "快速录音")
+                views.setTextViewText(R.id.quick_record_subtitle, "点击开始录音")
+                views.setTextViewText(R.id.quick_record_hint, "")
+            }
             return views
         }
 
@@ -68,15 +84,17 @@ class QuickRecordWidgetProvider : AppWidgetProvider() {
             val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
 
             return when {
-                minWidth < 110 || minHeight < 110 -> R.layout.widget_quick_record_compact
-                minWidth < 170 || minHeight < 170 -> R.layout.widget_quick_record
+                minWidth < 180 || minHeight < 180 -> R.layout.widget_quick_record_compact
+                minWidth < 260 || minHeight < 260 -> R.layout.widget_quick_record
                 else -> R.layout.widget_quick_record_expanded
             }
         }
 
         private fun launchIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
+                action = "com.audionotes.audio_notes.RECORD_AUDIO"
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addCategory(Intent.CATEGORY_DEFAULT)
             }
         }
 

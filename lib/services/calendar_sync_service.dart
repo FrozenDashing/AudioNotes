@@ -12,11 +12,25 @@ enum CalendarSyncStatus {
   permissionDenied,
 }
 
+class CalendarSyncResult {
+  final CalendarSyncStatus status;
+  final String? calendarEventId;
+  final String? calendarId;
+
+  const CalendarSyncResult({
+    required this.status,
+    this.calendarEventId,
+    this.calendarId,
+  });
+}
+
 /// Service for managing calendar integration with todos
 class CalendarSyncService {
   final DeviceCalendar _calendarPlugin = DeviceCalendar.instance;
   final SettingsRepository _settingsRepository = SettingsRepository();
   String? _languageCode;
+
+  static const String _todoUrlScheme = 'audionotes://todo/';
 
   Future<String> _getLanguageCode() async {
     if (_languageCode != null) {
@@ -43,6 +57,44 @@ class CalendarSyncService {
     final languageCode = await _getLanguageCode();
     final dueSuffix = languageCode == 'en' ? ' deadline' : ' 截止';
     return '$baseTitle$dueSuffix';
+  }
+
+  String _buildTodoUrl(String todoId) {
+    return '$_todoUrlScheme${Uri.encodeComponent(todoId)}';
+  }
+
+  bool _isEventForTodo(Event event, TodoItem todo) {
+    final marker = _buildTodoUrl(todo.id);
+    return event.url == marker;
+  }
+
+  Future<Event?> _findExistingTodoEvent(TodoItem todo) async {
+    final anchor = todo.remindAt ?? todo.dueAt;
+    if (anchor == null) {
+      return null;
+    }
+
+    final calendars = await getAvailableCalendars();
+    final calendarIds = calendars.map((calendar) => calendar.id).toList();
+    if (calendarIds.isEmpty) {
+      return null;
+    }
+
+    final start = anchor.subtract(const Duration(days: 365));
+    final end = anchor.add(const Duration(days: 365));
+    final events = await _calendarPlugin.listEvents(
+      start,
+      end,
+      calendarIds: calendarIds,
+    );
+
+    for (final event in events) {
+      if (_isEventForTodo(event, todo)) {
+        return event;
+      }
+    }
+
+    return null;
   }
 
   /// Check if calendar permissions are granted
@@ -103,7 +155,7 @@ class CalendarSyncService {
   }
 
   /// Create calendar event from todo
-  Future<String?> createTodoEvent(TodoItem todo) async {
+  Future<CalendarSyncResult> createTodoEvent(TodoItem todo) async {
     try {
       // Check permissions first
       final permissions = await checkPermissions();
@@ -136,10 +188,15 @@ class CalendarSyncService {
         startDate: startTime,
         endDate: endTime,
         description: todo.description ?? '',
+        url: _buildTodoUrl(todo.id),
         isAllDay: todo.dueAt != null && todo.remindAt == null,
       );
 
-      return result;
+      return CalendarSyncResult(
+        status: CalendarSyncStatus.success,
+        calendarEventId: result,
+        calendarId: calendarId,
+      );
     } catch (e) {
       throw CalendarSyncException(
         'Failed to create calendar event: ${e.toString()}',
@@ -149,16 +206,17 @@ class CalendarSyncService {
   }
 
   /// Update calendar event from todo
-  Future<void> updateTodoEvent(TodoItem todo) async {
+  Future<CalendarSyncResult> updateTodoEvent(TodoItem todo) async {
     try {
-      if (todo.calendarEventId == null) {
-        // No existing event, create new one
-        final eventId = await createTodoEvent(todo);
-        if (eventId != null) {
-          // Update todo with event ID
-          // This should be handled by the caller
-        }
-        return;
+      Event? existingEvent;
+      if (todo.calendarEventId != null) {
+        existingEvent = await _calendarPlugin.getEvent(todo.calendarEventId!);
+      }
+
+      existingEvent ??= await _findExistingTodoEvent(todo);
+
+      if (existingEvent == null) {
+        return createTodoEvent(todo);
       }
 
       // Update existing event
@@ -167,13 +225,21 @@ class CalendarSyncService {
           todo.remindAt?.add(const Duration(hours: 1)) ??
           startTime.add(const Duration(hours: 1));
       final title = await _buildCalendarTitle(todo);
+      final calendarId = existingEvent.calendarId;
 
       await _calendarPlugin.updateEvent(
-        eventId: todo.calendarEventId!,
+        eventId: existingEvent.eventId,
         title: title,
         description: Patch.set(todo.description ?? ''),
+        url: Patch.set(_buildTodoUrl(todo.id)),
         startDate: startTime,
         endDate: endTime,
+      );
+
+      return CalendarSyncResult(
+        status: CalendarSyncStatus.success,
+        calendarEventId: existingEvent.eventId,
+        calendarId: calendarId,
       );
     } catch (e) {
       throw CalendarSyncException(
@@ -196,38 +262,46 @@ class CalendarSyncService {
   }
 
   /// Sync todo with calendar
-  Future<CalendarSyncStatus> syncTodoWithCalendar(TodoItem todo) async {
+  Future<CalendarSyncResult> syncTodoWithCalendar(TodoItem todo) async {
     try {
       if (todo.remindAt == null && todo.dueAt == null) {
-        return CalendarSyncStatus.idle;
+        return const CalendarSyncResult(status: CalendarSyncStatus.idle);
       }
 
       if (todo.calendarEventId == null) {
-        // Create new event
-        final eventId = await createTodoEvent(todo);
-        if (eventId != null) {
-          return CalendarSyncStatus.success;
+        final existingEvent = await _findExistingTodoEvent(todo);
+        if (existingEvent != null) {
+          final updated = await updateTodoEvent(
+            todo.copyWith(calendarEventId: existingEvent.eventId),
+          );
+          return updated;
         }
-        return CalendarSyncStatus.error;
-      } else {
-        // Update existing event
-        await updateTodoEvent(todo);
-        return CalendarSyncStatus.success;
       }
+
+      return await updateTodoEvent(todo);
     } catch (e) {
       if (e is CalendarSyncException &&
           e.status == CalendarSyncStatus.permissionDenied) {
-        return CalendarSyncStatus.permissionDenied;
+        return const CalendarSyncResult(
+          status: CalendarSyncStatus.permissionDenied,
+        );
       }
-      return CalendarSyncStatus.error;
+      return const CalendarSyncResult(status: CalendarSyncStatus.error);
     }
   }
 
   /// Remove todo from calendar
   Future<CalendarSyncStatus> removeTodoFromCalendar(TodoItem todo) async {
     try {
+      Event? event;
       if (todo.calendarEventId != null) {
-        await deleteTodoEvent(todo.calendarEventId!);
+        event = await _calendarPlugin.getEvent(todo.calendarEventId!);
+      }
+
+      event ??= await _findExistingTodoEvent(todo);
+
+      if (event != null) {
+        await deleteTodoEvent(event.eventId);
         return CalendarSyncStatus.success;
       }
       return CalendarSyncStatus.idle;

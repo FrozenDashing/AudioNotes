@@ -7,13 +7,13 @@
     android:background="@drawable/widget_card_background"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="22dp">
+    android:padding="20dp">
 
     <FrameLayout
-        android:layout_width="104dp"
-        android:layout_height="104dp"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
         android:background="@drawable/widget_record_circle"
-        android:padding="22dp">
+        android:padding="20dp">
 
         <ImageView
             android:id="@+id/quick_record_icon"
@@ -29,22 +29,21 @@
         android:id="@+id/quick_record_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="16dp"
         android:text="@string/widget_quick_record_title"
         android:textColor="@color/widget_text_primary"
-        android:textSize="21sp"
+        android:textSize="18sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/quick_record_subtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="4dp"
         android:gravity="center"
-        android:lineSpacingExtra="2dp"
         android:text="@string/widget_quick_record_subtitle"
         android:textColor="@color/widget_text_secondary"
-        android:textSize="13sp" />
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/quick_record_hint"

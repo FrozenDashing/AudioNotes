@@ -75,50 +75,47 @@ class TodoSummaryWidgetProvider : AppWidgetProvider() {
             )
 
             views.setOnClickPendingIntent(R.id.todo_summary_root, pendingIntent)
-            views.setOnClickPendingIntent(R.id.todo_summary_open_app, pendingIntent)
             views.setTextViewText(R.id.todo_summary_title, summary.title)
             views.setTextViewText(R.id.todo_summary_subtitle, summary.subtitle)
-            views.setTextViewText(R.id.todo_summary_total, summary.totalCount.toString())
-            views.setTextViewText(R.id.todo_summary_completed, summary.completedCount.toString())
 
             bindSection(
                 views = views,
-                titleViewId = R.id.section_today_title,
-                countViewId = R.id.section_today_count,
-                emptyViewId = R.id.section_today_empty,
+                titleViewId = R.id.section_urgent_title,
+                countViewId = R.id.section_urgent_count,
+                emptyViewId = R.id.section_urgent_empty,
                 itemViewIds = intArrayOf(
-                    R.id.section_today_item_1,
-                    R.id.section_today_item_2,
-                    R.id.section_today_item_3,
+                    R.id.section_urgent_item_1,
+                    R.id.section_urgent_item_2,
+                    R.id.section_urgent_item_3,
                 ),
                 section = summary.sections.getOrNull(0),
-                accentColor = ContextCompat.getColor(context, R.color.widget_today_accent),
+                accentColor = ContextCompat.getColor(context, R.color.widget_record_accent),
             )
             bindSection(
                 views = views,
-                titleViewId = R.id.section_tomorrow_title,
-                countViewId = R.id.section_tomorrow_count,
-                emptyViewId = R.id.section_tomorrow_empty,
+                titleViewId = R.id.section_high_priority_title,
+                countViewId = R.id.section_high_priority_count,
+                emptyViewId = R.id.section_high_priority_empty,
                 itemViewIds = intArrayOf(
-                    R.id.section_tomorrow_item_1,
-                    R.id.section_tomorrow_item_2,
-                    R.id.section_tomorrow_item_3,
+                    R.id.section_high_priority_item_1,
+                    R.id.section_high_priority_item_2,
+                    R.id.section_high_priority_item_3,
                 ),
                 section = summary.sections.getOrNull(1),
                 accentColor = ContextCompat.getColor(context, R.color.widget_tomorrow_accent),
             )
             bindSection(
                 views = views,
-                titleViewId = R.id.section_backlog_title,
-                countViewId = R.id.section_backlog_count,
-                emptyViewId = R.id.section_backlog_empty,
+                titleViewId = R.id.section_this_week_title,
+                countViewId = R.id.section_this_week_count,
+                emptyViewId = R.id.section_this_week_empty,
                 itemViewIds = intArrayOf(
-                    R.id.section_backlog_item_1,
-                    R.id.section_backlog_item_2,
-                    R.id.section_backlog_item_3,
+                    R.id.section_this_week_item_1,
+                    R.id.section_this_week_item_2,
+                    R.id.section_this_week_item_3,
                 ),
                 section = summary.sections.getOrNull(2),
-                accentColor = ContextCompat.getColor(context, R.color.widget_backlog_accent),
+                accentColor = ContextCompat.getColor(context, R.color.widget_today_accent),
             )
 
             applySizeVariant(views, options)
@@ -129,19 +126,18 @@ class TodoSummaryWidgetProvider : AppWidgetProvider() {
             val minWidth = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
             val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
 
-            val compact = minWidth < 260 || minHeight < 220
-            val regular = minWidth < 360 || minHeight < 320
+            val showHighPriority = minWidth >= 200 && minHeight >= 180
+            val showThisWeek = minWidth >= 280 && minHeight >= 240
 
-            if (compact) {
-                views.setViewVisibility(R.id.section_tomorrow_panel, View.GONE)
-                views.setViewVisibility(R.id.section_backlog_panel, View.GONE)
-            } else if (regular) {
-                views.setViewVisibility(R.id.section_tomorrow_panel, View.VISIBLE)
-                views.setViewVisibility(R.id.section_backlog_panel, View.GONE)
-            } else {
-                views.setViewVisibility(R.id.section_tomorrow_panel, View.VISIBLE)
-                views.setViewVisibility(R.id.section_backlog_panel, View.VISIBLE)
-            }
+            views.setViewVisibility(R.id.section_urgent_panel, View.VISIBLE)
+            views.setViewVisibility(
+                R.id.section_high_priority_panel,
+                if (showHighPriority) View.VISIBLE else View.GONE,
+            )
+            views.setViewVisibility(
+                R.id.section_this_week_panel,
+                if (showThisWeek && showHighPriority) View.VISIBLE else View.GONE,
+            )
         }
 
         private fun bindSection(

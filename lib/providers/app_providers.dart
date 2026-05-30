@@ -641,27 +641,18 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             .toList(growable: false);
         state = AsyncValue.data(updatedTodos);
         _syncWidgets(updatedTodos);
-        return updated;
+      } else {
+        await loadTodos();
       }
+    } else {
+      await loadTodos();
     }
 
-    // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
-      await loadTodos();
       return result;
     }
 
-    if (currentValue == null) {
-      await loadTodos();
-      return refreshed;
-    }
-
-    final updatedTodos = currentValue
-        .map((todo) => todo.id == id ? refreshed : todo)
-        .toList(growable: false);
-    state = AsyncValue.data(updatedTodos);
-    _syncWidgets(updatedTodos);
     try {
       await ref
           .read(reminderServiceProvider)
@@ -783,10 +774,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Delete a todo
   Future<void> deleteTodo(String id) async {
+    final todo = await _repository.getTodoById(id);
+    if (todo == null) {
+      await loadTodos();
+      return;
+    }
+
     await ref.read(reminderServiceProvider).clearReminder(id);
-    await _repository.deleteTodo(id);
-    // Refresh trash list so deleted item appears immediately in Trash UI
-    await ref.read(trashTodosProvider.notifier).loadTrash();
+
+    if (_shouldHardDeleteTodo(todo)) {
+      await _repository.purgeTodoPermanently(id);
+    } else {
+      await _repository.deleteTodo(id);
+      // Refresh trash list so deleted item appears immediately in Trash UI
+      await ref.read(trashTodosProvider.notifier).loadTrash();
+    }
 
     // Try to remove locally if we have current state
     final currentValue = state.value;
@@ -804,9 +806,22 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Delete multiple todos
   Future<void> deleteTodos(List<String> ids) async {
+    final todoMap = <String, TodoItem>{};
+    for (final id in ids) {
+      final todo = await _repository.getTodoById(id);
+      if (todo != null) {
+        todoMap[id] = todo;
+      }
+    }
+
     for (final id in ids) {
       await ref.read(reminderServiceProvider).clearReminder(id);
-      await _repository.deleteTodo(id);
+      final todo = todoMap[id];
+      if (todo != null && _shouldHardDeleteTodo(todo)) {
+        await _repository.purgeTodoPermanently(id);
+      } else {
+        await _repository.deleteTodo(id);
+      }
     }
     _selectedIds.clear();
     // Ensure trash list is up-to-date after batch delete
@@ -848,12 +863,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .toList();
 
     for (final id in completedIds) {
+      final todo = await _repository.getTodoById(id);
       await ref.read(reminderServiceProvider).clearReminder(id);
-      await _repository.deleteTodo(id);
+      if (todo != null && _shouldHardDeleteTodo(todo)) {
+        await _repository.purgeTodoPermanently(id);
+      } else {
+        await _repository.deleteTodo(id);
+      }
     }
     // Refresh trash after removing completed items
     await ref.read(trashTodosProvider.notifier).loadTrash();
     await loadTodos();
+  }
+
+  bool _shouldHardDeleteTodo(TodoItem todo) {
+    return todo.text.trim().isEmpty || todo.taskState == TodoTaskState.failed;
   }
 
   /// Reorder todos

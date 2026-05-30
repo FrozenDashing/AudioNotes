@@ -222,10 +222,12 @@ class ReminderService {
 
   Future<void> _syncTodoWithCalendar(TodoItem todo) async {
     try {
-      final status = await _calendarSyncService.syncTodoWithCalendar(todo);
+      final result = await _calendarSyncService.syncTodoWithCalendar(todo);
       final updatedTodo = todo.copyWith(
+        calendarEventId: result.calendarEventId ?? todo.calendarEventId,
+        calendarId: result.calendarId ?? todo.calendarId,
         calendarMode: _notificationMode.stringValue,
-        syncStatus: status.name,
+        syncStatus: result.status.name,
         syncedAt: DateTime.now(),
       );
       await _todoRepository.updateTodo(updatedTodo);
@@ -236,10 +238,6 @@ class ReminderService {
 
   Future<void> _cancelCalendarReminder(TodoItem todo) async {
     try {
-      if (todo.calendarEventId == null) {
-        return;
-      }
-
       await _calendarSyncService.removeTodoFromCalendar(todo);
       final updatedTodo = todo.copyWith(
         calendarEventId: null,

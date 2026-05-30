@@ -42,7 +42,7 @@ object WidgetSummaryParser {
             }
 
             WidgetSummary(
-                title = json.optString("title", "今日待办"),
+                title = json.optString("title", "待办"),
                 subtitle = json.optString("subtitle", "暂无更新"),
                 totalCount = json.optInt("totalCount", 0),
                 pendingCount = json.optInt("pendingCount", 0),
@@ -57,7 +57,7 @@ object WidgetSummaryParser {
 
     private fun emptySummary(): WidgetSummary {
         return WidgetSummary(
-            title = "今日待办",
+            title = "待办",
             subtitle = "暂无待办数据",
             totalCount = 0,
             pendingCount = 0,
@@ -69,9 +69,9 @@ object WidgetSummaryParser {
 
     private fun defaultSections(): List<WidgetSection> {
         return listOf(
-            WidgetSection("今天", 0, emptyList()),
-            WidgetSection("明天", 0, emptyList()),
-            WidgetSection("待办", 0, emptyList()),
+            WidgetSection("紧急", 0, emptyList()),
+            WidgetSection("高优先级", 0, emptyList()),
+            WidgetSection("本周", 0, emptyList()),
         )
     }
 

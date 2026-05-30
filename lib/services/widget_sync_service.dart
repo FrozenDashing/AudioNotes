@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/todo_item.dart';
+import '../models/todo_priority.dart';
 
 class WidgetSyncService {
   static const MethodChannel _channel = MethodChannel('com.audionotes/widgets');
@@ -23,7 +24,11 @@ class WidgetSyncService {
         DateTime.now().toIso8601String(),
       );
 
+      foundation.debugPrint(
+          'Widget sync: Saving payload with ${payload['sections'].length} sections');
+
       await _channel.invokeMethod<void>('refreshTodoWidgets');
+      foundation.debugPrint('Widget sync: Triggered refresh for todo widgets');
     } catch (e) {
       foundation.debugPrint('Failed to sync widget summary: $e');
     }
@@ -32,46 +37,49 @@ class WidgetSyncService {
   Map<String, dynamic> _buildSummaryPayload(List<TodoItem> todos) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    final dayAfterTomorrow = tomorrow.add(const Duration(days: 1));
+    final thisWeekEnd = today.add(const Duration(days: 7));
+    final urgentItems =
+        todos.where((todo) => todo.priority == TodoPriority.urgent).toList();
+    final highPriorityItems =
+        todos.where((todo) => todo.priority == TodoPriority.high).toList();
 
     final completedCount =
         todos.where((todo) => todo.status == TodoStatus.completed).length;
     final pendingTodos =
         todos.where((todo) => todo.status == TodoStatus.pending).toList();
 
-    final todayItems = pendingTodos
-        .where((todo) => _isSameDay(todo.dueAt, today))
-        .map(_mapTodoText)
-        .toList();
-    final tomorrowItems = pendingTodos
-        .where((todo) => _isSameDay(todo.dueAt, tomorrow))
-        .map(_mapTodoText)
-        .toList();
-    final backlogItems = pendingTodos
+    final thisWeekItems = pendingTodos
         .where((todo) {
           final dueAt = todo.dueAt;
           if (dueAt == null) {
-            return true;
+            return false;
           }
 
           final dueDate = DateTime(dueAt.year, dueAt.month, dueAt.day);
-          return dueDate.isBefore(today) || !dueDate.isBefore(dayAfterTomorrow);
+          return dueDate.isBefore(thisWeekEnd) && !dueDate.isBefore(today);
         })
+        .map(_mapTodoText)
+        .toList();
+    final highPriorityPendingItems = highPriorityItems
+        .where((todo) => todo.status == TodoStatus.pending)
+        .map(_mapTodoText)
+        .toList();
+    final urgentPendingItems = urgentItems
+        .where((todo) => todo.status == TodoStatus.pending)
         .map(_mapTodoText)
         .toList();
 
     return <String, dynamic>{
-      'title': '今日待办',
+      'title': '待办',
       'subtitle': _buildSubtitle(pendingTodos.length, completedCount),
       'totalCount': todos.length,
       'pendingCount': pendingTodos.length,
       'completedCount': completedCount,
       'updatedAt': DateTime.now().toIso8601String(),
       'sections': <Map<String, dynamic>>[
-        _buildSection('今天', todayItems),
-        _buildSection('明天', tomorrowItems),
-        _buildSection('待办', backlogItems),
+        _buildSection('紧急', urgentPendingItems),
+        _buildSection('高优先级', highPriorityPendingItems),
+        _buildSection('本周', thisWeekItems),
       ],
     };
   }
@@ -103,13 +111,13 @@ class WidgetSyncService {
     return '未命名待办';
   }
 
-  bool _isSameDay(DateTime? left, DateTime rightDay) {
-    if (left == null) {
-      return false;
-    }
+  // bool _isSameDay(DateTime? left, DateTime rightDay) {
+  // if (left == null) {
+  //   return false;
+  // }
 
-    return left.year == rightDay.year &&
-        left.month == rightDay.month &&
-        left.day == rightDay.day;
-  }
+  // return left.year == rightDay.year &&
+  //     left.month == rightDay.month &&
+  //     left.day == rightDay.day;
+  // }
 }

@@ -197,14 +197,6 @@ class _NotificationModeSelectorState
     final calendarService = ref.read(calendarSyncServiceProvider);
     final permissions = await calendarService.checkPermissions();
     if (permissions == CalendarPermissionStatus.granted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(context.tr('settings.notification.permissionGranted')),
-          ),
-        );
-      }
       return true;
     }
 
