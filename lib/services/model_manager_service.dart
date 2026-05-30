@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:archive/archive.dart';
+import 'package:flutter/services.dart';
 
 /// Vosk model information
 class VoskModel {
@@ -51,6 +52,8 @@ class VoskModel {
 
 /// Service for managing Vosk model downloads and loading
 class ModelManagerService {
+  static const MethodChannel _storageChannel =
+      MethodChannel('com.audionotes/storage');
   /// Check if a model is already downloaded
   Future<bool> isModelDownloaded(String modelName) async {
     try {
@@ -177,6 +180,17 @@ class ModelManagerService {
       foundation.debugPrint('Error getting storage: $e');
       // Fallback: assume at least 100MB available for conservative UI behavior
       return 100 * 1024 * 1024;
+    }
+  }
+
+  /// Get free bytes from platform
+  Future<int> getFreeBytes() async {
+    try {
+      final result = await _storageChannel.invokeMethod('getFreeBytes');
+      return result as int? ?? 100 * 1024 * 1024; // Fallback
+    } catch (e) {
+      foundation.debugPrint('Error getting free bytes: $e');
+      return 100 * 1024 * 1024; // Fallback
     }
   }
 

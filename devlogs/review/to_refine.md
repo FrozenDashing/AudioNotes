@@ -141,20 +141,22 @@
 ## 六、性能隐患
 
 ### 23. loadTodos 全量刷新
-- 几乎所有操作（toggleStatus、updateText、reorder 等）最终都调用 `loadTodos()` 全量重新加载
-- 随 Todo 数量增长，这会导致不必要的数据库查询和 UI 重建
-- **建议**：改为局部更新（在内存中修改列表，仅必要时全量刷新）。
-- **已部分处理**：已在 `TodoListNotifier` 的 `loadTodos` 中引入批量标签缓存刷新，减少标签查询；后续可继续把一些单数据点更新（如文本、优先级）改为局部状态替换，仅在必要时触发全量重载。
+  - 几乎所有操作（toggleStatus、updateText、reorder 等）最终都调用 `loadTodos()` 全量重新加载
+  - 随 Todo 数量增长，这会导致不必要的数据库查询和 UI 重建
+  - **建议**：改为局部更新（在内存中修改列表，仅必要时全量刷新）。
+  - **已处理**：在 `TodoListNotifier` 中实现了局部更新逻辑，对于文本、优先级、分类、截止时间等单数据点更新使用内存中的局部状态替换，仅在失败时回退到全量刷新，显著减少了不必要的数据库查询。
 
 ### 24. tagsForTodoProvider 逐 Todo 请求
-- 每个 TodoItemCard 都通过 `tagsForTodoProvider(todo.id)` 独立查询标签
-- 在列表视图下，N 个 Todo 产生 N 次数据库查询
-- **建议**：批量预加载标签数据，或在 loadTodos 时一并获取所有关联标签。
+  - 每个 TodoItemCard 都通过 `tagsForTodoProvider(todo.id)` 独立查询标签
+  - 在列表视图下，N 个 Todo 产生 N 次数据库查询
+  - **建议**：批量预加载标签数据，或在 loadTodos 时一并获取所有关联标签。
+  - **已处理**：实现了 `todoTagsCacheNotifierProvider` 批量加载机制，在 `loadTodos()` 中批量加载所有 Todo 的标签，减少了 N 次独立查询的开销。
 
 ### 25. getAvailableStorage 硬编码返回值
-- `ModelManagerService.getAvailableStorage()` 硬编码返回 `1073741824`（1GB）
-- **问题**：无法反映真实存储状态，可能导致下载模型时空间不足
-- **建议**：使用平台 API 获取实际可用存储空间。
+  - `ModelManagerService.getAvailableStorage()` 硬编码返回 `1073741824`（1GB）
+  - **问题**：无法反映真实存储状态，可能导致下载模型时空间不足
+  - **建议**：使用平台 API 获取实际可用存储空间。
+  - **已处理**：实现了 `getFreeBytes()` 方法，通过 `com.audionotes/storage` 平台通道获取真实可用存储空间，同时提供了 Android 和 iOS 的平台特定实现。
 
 ---
 

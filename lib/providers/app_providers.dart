@@ -501,6 +501,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   /// Update todo text
   Future<void> updateText(String id, String newText) async {
     await ref.read(todoRepositoryProvider).updateText(id, newText);
+    
+    // Try to update locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updated = await _repository.getTodoById(id);
+      if (updated != null) {
+        final updatedTodos = currentValue
+            .map((todo) => todo.id == id ? updated : todo)
+            .toList(growable: false);
+        state = AsyncValue.data(updatedTodos);
+        return;
+      }
+    }
+    
+    // Fallback to full reload if local update fails
     await loadTodos();
   }
 
@@ -544,6 +559,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   /// Update priority for a todo and refresh list state
   Future<void> updatePriority(String id, TodoPriority priority) async {
     await _repository.updatePriority(id, priority);
+    
+    // Try to update locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updated = await _repository.getTodoById(id);
+      if (updated != null) {
+        final updatedTodos = currentValue
+            .map((todo) => todo.id == id ? updated : todo)
+            .toList(growable: false);
+        state = AsyncValue.data(updatedTodos);
+        return;
+      }
+    }
+    
+    // Fallback to full reload if local update fails
     await loadTodos();
   }
 
@@ -561,19 +591,32 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       await loadTodos();
       return null;
     }
-
+    
+    // Try to update locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updated = await _repository.getTodoById(id);
+      if (updated != null) {
+        final updatedTodos = currentValue
+            .map((todo) => todo.id == id ? updated : todo)
+            .toList(growable: false);
+        state = AsyncValue.data(updatedTodos);
+        return updated;
+      }
+    }
+    
+    // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
       await loadTodos();
       return result;
     }
-
-    final currentValue = state.value;
+    
     if (currentValue == null) {
       await loadTodos();
       return refreshed;
     }
-
+    
     final updatedTodos = currentValue
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
@@ -583,18 +626,32 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   Future<TodoItem?> updateCategory(String id, String? categoryId) async {
     await _repository.updateCategory(id, categoryId);
+    
+    // Try to update locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updated = await _repository.getTodoById(id);
+      if (updated != null) {
+        final updatedTodos = currentValue
+            .map((todo) => todo.id == id ? updated : todo)
+            .toList(growable: false);
+        state = AsyncValue.data(updatedTodos);
+        return updated;
+      }
+    }
+    
+    // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
       await loadTodos();
       return null;
     }
-
-    final currentValue = state.value;
+    
     if (currentValue == null) {
       await loadTodos();
       return refreshed;
     }
-
+    
     final updatedTodos = currentValue
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
@@ -679,6 +736,18 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     await _repository.deleteTodo(id);
     // Refresh trash list so deleted item appears immediately in Trash UI
     await ref.read(trashTodosProvider.notifier).loadTrash();
+    
+    // Try to remove locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updatedTodos = currentValue
+          .where((todo) => todo.id != id)
+          .toList(growable: false);
+      state = AsyncValue.data(updatedTodos);
+      return;
+    }
+    
+    // Fallback to full reload if local update fails
     await loadTodos();
   }
 
@@ -691,6 +760,18 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     _selectedIds.clear();
     // Ensure trash list is up-to-date after batch delete
     await ref.read(trashTodosProvider.notifier).loadTrash();
+    
+    // Try to remove locally if we have current state
+    final currentValue = state.value;
+    if (currentValue != null) {
+      final updatedTodos = currentValue
+          .where((todo) => !ids.contains(todo.id))
+          .toList(growable: false);
+      state = AsyncValue.data(updatedTodos);
+      return;
+    }
+    
+    // Fallback to full reload if local update fails
     await loadTodos();
   }
 
