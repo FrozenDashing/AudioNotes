@@ -121,15 +121,10 @@ class TodoRepository {
   Future<void> updateText(String id, String newText) async {
     final todo = await _dbHelper.getTodoById(id);
     if (todo == null) return;
-
     final trimmedText = newText.trim();
-    final updatedText = trimmedText.isEmpty &&
-            (todo.rawTranscript != null && todo.rawTranscript!.isNotEmpty)
-        ? todo.rawTranscript!
-        : trimmedText;
 
     final updated = todo.copyWith(
-      text: updatedText,
+      text: trimmedText,
       updatedAt: DateTime.now(),
     );
     await _dbHelper.updateTodo(updated);
