@@ -56,6 +56,7 @@ enum TodoRepeatType {
 class TodoItem {
   final String id;
   final String text;
+  final String? description;
   final String? rawTranscript;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -76,9 +77,19 @@ class TodoItem {
   final int? orderIndex;
   final String? meta;
 
+  // Calendar sync fields
+  final String? calendarEventId;
+  final String? calendarId;
+  final String? calendarMode;
+  final DateTime? syncedAt;
+  final String? syncStatus;
+  final int? notificationId;
+  final String? notificationMode;
+
   const TodoItem({
     required this.id,
     required this.text,
+    this.description,
     this.rawTranscript,
     required this.createdAt,
     this.updatedAt,
@@ -98,6 +109,13 @@ class TodoItem {
     this.modelVersion,
     this.orderIndex,
     this.meta,
+    this.calendarEventId,
+    this.calendarId,
+    this.calendarMode,
+    this.syncedAt,
+    this.syncStatus,
+    this.notificationId,
+    this.notificationMode,
   });
 
   /// Create TodoItem from database map
@@ -105,6 +123,7 @@ class TodoItem {
     return TodoItem(
       id: json['id'] as String,
       text: json['text'] as String,
+      description: json['description'] as String?,
       rawTranscript: json['raw_text'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
       updatedAt: json['updated_at'] != null
@@ -134,6 +153,13 @@ class TodoItem {
       modelVersion: json['model_version'] as String?,
       orderIndex: json['order_index'] as int?,
       meta: json['meta'] as String?,
+      calendarEventId: json['calendar_event_id'] as String?,
+      calendarId: json['calendar_id'] as String?,
+      calendarMode: json['calendar_mode'] as String?,
+      syncedAt: json['synced_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['synced_at'] as int)
+          : null,
+      syncStatus: json['sync_status'] as String?,
     );
   }
 
@@ -142,6 +168,7 @@ class TodoItem {
     return {
       'id': id,
       'text': text,
+      'description': description,
       'raw_text': rawTranscript,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt?.millisecondsSinceEpoch,
@@ -161,6 +188,11 @@ class TodoItem {
       'model_version': modelVersion,
       'order_index': orderIndex,
       'meta': meta,
+      'calendar_event_id': calendarEventId,
+      'calendar_id': calendarId,
+      'calendar_mode': calendarMode,
+      'synced_at': syncedAt?.millisecondsSinceEpoch,
+      'sync_status': syncStatus,
     };
   }
 
@@ -168,6 +200,7 @@ class TodoItem {
   TodoItem copyWith({
     String? id,
     String? text,
+    String? description,
     String? rawTranscript,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -187,10 +220,18 @@ class TodoItem {
     String? modelVersion,
     int? orderIndex,
     String? meta,
+    String? calendarEventId,
+    String? calendarId,
+    String? calendarMode,
+    DateTime? syncedAt,
+    String? syncStatus,
+    int? notificationId,
+    String? notificationMode,
   }) {
     return TodoItem(
       id: id ?? this.id,
       text: text ?? this.text,
+      description: description ?? this.description,
       rawTranscript: rawTranscript ?? this.rawTranscript,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -210,6 +251,13 @@ class TodoItem {
       modelVersion: modelVersion ?? this.modelVersion,
       orderIndex: orderIndex ?? this.orderIndex,
       meta: meta ?? this.meta,
+      calendarEventId: calendarEventId ?? this.calendarEventId,
+      calendarId: calendarId ?? this.calendarId,
+      calendarMode: calendarMode ?? this.calendarMode,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      notificationId: notificationId ?? this.notificationId,
+      notificationMode: notificationMode ?? this.notificationMode,
     );
   }
 

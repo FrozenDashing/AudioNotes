@@ -3,6 +3,7 @@ import 'package:flutter/material.dart'; // For Color
 import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
+import '../models/notification_mode.dart';
 
 /// Repository for managing settings persistence
 class SettingsRepository {
@@ -21,6 +22,7 @@ class SettingsRepository {
       'auto_remove_trailing_period';
   static const String _trashAutoPurgeIntervalKey = 'trash_auto_purge_interval';
   static const String _languageCodeKey = 'language_code';
+  static const String _notificationModeKey = 'notification_mode';
 
   /// Load settings from shared preferences
   Future<SettingsState> loadSettings() async {
@@ -75,6 +77,8 @@ class SettingsRepository {
         orElse: () => TrashAutoPurgeInterval.sevenDays,
       ),
       languageCode: prefs.getString(_languageCodeKey) ?? 'zh_CN',
+      notificationMode: NotificationModeExtension.fromString(
+          prefs.getString(_notificationModeKey) ?? 'none'),
     );
   }
 
@@ -126,5 +130,17 @@ class SettingsRepository {
         await prefs.setString(_languageCodeKey, settings.languageCode);
 
     return result;
+  }
+
+  /// Save notification mode
+  Future<bool> saveNotificationMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setString(_notificationModeKey, mode);
+  }
+
+  /// Load notification mode
+  Future<String> loadNotificationMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_notificationModeKey) ?? 'none';
   }
 }

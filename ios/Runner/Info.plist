@@ -4,6 +4,8 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>AudioNotes needs microphone access to record your voice and convert speech to text notes.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>AudioNotes needs calendar access to sync your todo reminders with system calendar.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

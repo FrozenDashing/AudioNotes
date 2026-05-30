@@ -9,8 +9,9 @@ import '../services/recorder_service.dart';
 import '../services/recognition_service.dart';
 import '../services/audio_playback_service.dart';
 import '../services/model_manager_service.dart';
-import '../services/notification_service.dart';
+import '../services/awesome_notification_service.dart';
 import '../services/reminder_service.dart';
+import '../services/calendar_sync_service.dart';
 import '../services/todo_grouping_service.dart';
 import '../services/settings_service.dart';
 import '../data/todo_repository.dart';
@@ -116,9 +117,14 @@ class TodoTagsCacheNotifier extends Notifier<Map<String, List<Tag>>> {
   List<Tag>? get(String todoId) => state[todoId];
 }
 
-/// Provider for notification service
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService.instance;
+/// Provider for awesome notification service
+final notificationServiceProvider = Provider<AwesomeNotificationService>((ref) {
+  return AwesomeNotificationService();
+});
+
+/// Provider for calendar sync service
+final calendarSyncServiceProvider = Provider<CalendarSyncService>((ref) {
+  return CalendarSyncService();
 });
 
 /// Provider for reminder service
@@ -128,6 +134,7 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
     todoRepository: ref.read(todoRepositoryProvider),
     notificationService: ref.read(notificationServiceProvider),
     settingsRepository: ref.read(settingsRepositoryProvider),
+    calendarSyncService: ref.read(calendarSyncServiceProvider),
   );
 });
 
@@ -470,6 +477,15 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
           await loadTodos();
           return;
         }
+
+        if (status == TodoStatus.completed) {
+          await ref.read(reminderServiceProvider).clearReminder(id);
+        } else {
+          await ref
+              .read(reminderServiceProvider)
+              .scheduleReminderForTodo(updated);
+        }
+
         await loadTodos();
         return;
       }
@@ -484,6 +500,14 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       if (updated == null) {
         await loadTodos();
         return;
+      }
+
+      if (status == TodoStatus.completed) {
+        await ref.read(reminderServiceProvider).clearReminder(id);
+      } else {
+        await ref
+            .read(reminderServiceProvider)
+            .scheduleReminderForTodo(updated);
       }
 
       _selectedIds.remove(id);
@@ -501,7 +525,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   /// Update todo text
   Future<void> updateText(String id, String newText) async {
     await ref.read(todoRepositoryProvider).updateText(id, newText);
-    
+
     // Try to update locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
@@ -514,7 +538,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         return;
       }
     }
-    
+
     // Fallback to full reload if local update fails
     await loadTodos();
   }
@@ -534,16 +558,16 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     }
 
     final currentValue = state.value;
-    if (currentValue == null) {
+    if (currentValue != null) {
+      final updatedTodos = currentValue
+          .map((todo) => todo.id == id ? refreshed : todo)
+          .toList(growable: false);
+      state = AsyncValue.data(updatedTodos);
+    } else {
       await loadTodos();
-      return refreshed;
     }
 
-    final updatedTodos = currentValue
-        .map((todo) => todo.id == id ? refreshed : todo)
-        .toList(growable: false);
-    state = AsyncValue.data(updatedTodos);
-    // Schedule or clear system notification for this todo via ReminderService
+    // Schedule or clear system notification for this todo via ReminderService.
     try {
       await ref
           .read(reminderServiceProvider)
@@ -559,7 +583,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   /// Update priority for a todo and refresh list state
   Future<void> updatePriority(String id, TodoPriority priority) async {
     await _repository.updatePriority(id, priority);
-    
+
     // Try to update locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
@@ -572,7 +596,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         return;
       }
     }
-    
+
     // Fallback to full reload if local update fails
     await loadTodos();
   }
@@ -591,7 +615,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       await loadTodos();
       return null;
     }
-    
+
     // Try to update locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
@@ -604,29 +628,36 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         return updated;
       }
     }
-    
+
     // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
       await loadTodos();
       return result;
     }
-    
+
     if (currentValue == null) {
       await loadTodos();
       return refreshed;
     }
-    
+
     final updatedTodos = currentValue
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
+    try {
+      await ref
+          .read(reminderServiceProvider)
+          .scheduleReminderForTodo(refreshed);
+    } catch (e) {
+      foundation.debugPrint('Failed to sync due time for todo $id: $e');
+    }
     return refreshed;
   }
 
   Future<TodoItem?> updateCategory(String id, String? categoryId) async {
     await _repository.updateCategory(id, categoryId);
-    
+
     // Try to update locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
@@ -639,19 +670,19 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         return updated;
       }
     }
-    
+
     // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
       await loadTodos();
       return null;
     }
-    
+
     if (currentValue == null) {
       await loadTodos();
       return refreshed;
     }
-    
+
     final updatedTodos = currentValue
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
@@ -736,17 +767,16 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     await _repository.deleteTodo(id);
     // Refresh trash list so deleted item appears immediately in Trash UI
     await ref.read(trashTodosProvider.notifier).loadTrash();
-    
+
     // Try to remove locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
-      final updatedTodos = currentValue
-          .where((todo) => todo.id != id)
-          .toList(growable: false);
+      final updatedTodos =
+          currentValue.where((todo) => todo.id != id).toList(growable: false);
       state = AsyncValue.data(updatedTodos);
       return;
     }
-    
+
     // Fallback to full reload if local update fails
     await loadTodos();
   }
@@ -760,7 +790,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     _selectedIds.clear();
     // Ensure trash list is up-to-date after batch delete
     await ref.read(trashTodosProvider.notifier).loadTrash();
-    
+
     // Try to remove locally if we have current state
     final currentValue = state.value;
     if (currentValue != null) {
@@ -770,7 +800,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       state = AsyncValue.data(updatedTodos);
       return;
     }
-    
+
     // Fallback to full reload if local update fails
     await loadTodos();
   }
@@ -967,6 +997,24 @@ class TrashTodosNotifier extends AsyncNotifier<List<TodoItem>> {
   }
 
   Future<void> purgeExpiredTrash(TrashAutoPurgeInterval interval) async {
+    final expiredItems = await _repository.getDeletedTodos();
+    final cutoff = DateTime.now().subtract(
+      switch (interval) {
+        TrashAutoPurgeInterval.oneDay => const Duration(days: 1),
+        TrashAutoPurgeInterval.threeDays => const Duration(days: 3),
+        TrashAutoPurgeInterval.sevenDays => const Duration(days: 7),
+        TrashAutoPurgeInterval.thirtyDays => const Duration(days: 30),
+        TrashAutoPurgeInterval.never => Duration.zero,
+      },
+    );
+
+    for (final item in expiredItems) {
+      final deletedAt = item.deletedAt;
+      if (deletedAt != null && deletedAt.isBefore(cutoff)) {
+        await ref.read(reminderServiceProvider).clearReminder(item.id);
+      }
+    }
+
     await _repository.purgeExpiredDeletedTodos(interval);
     await loadTrash();
     await ref.read(todoListProvider.notifier).loadTodos();

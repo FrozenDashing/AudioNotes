@@ -5,24 +5,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' as foundation;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_i18n.dart';
 import 'screens/home_screen.dart';
 import 'models/settings_state.dart';
 import 'providers/settings_provider.dart';
 import 'providers/app_providers.dart';
+import 'services/awesome_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize shared preferences
-  await SharedPreferences.getInstance();
+  final notificationService = AwesomeNotificationService();
+  await notificationService.initialize();
 
-  runApp(
-    const ProviderScope(
-      child: AudioNotesApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: AudioNotesApp()));
 }
 
 class AudioNotesApp extends ConsumerStatefulWidget {
@@ -49,8 +45,7 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
 
   Future<void> _initializeServices() async {
     try {
-      await ref.read(notificationServiceProvider).initialize();
-      await ref.read(reminderServiceProvider).syncPendingReminders();
+      await ref.read(reminderServiceProvider).initialize();
 
       final settingsRepository = ref.read(settingsRepositoryProvider);
       final settings = await settingsRepository.loadSettings();

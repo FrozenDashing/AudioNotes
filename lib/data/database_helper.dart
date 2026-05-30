@@ -12,7 +12,7 @@ import 'todo_query_builder.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 10;
 
   DatabaseHelper._init();
 
@@ -50,6 +50,7 @@ class DatabaseHelper {
       CREATE TABLE todo_item (
         id $idType,
         text $textType,
+        description $nullableTextType,
         raw_text $nullableTextType,
         created_at $intType,
         updated_at $nullableIntType,
@@ -68,7 +69,14 @@ class DatabaseHelper {
         error_message $nullableTextType,
         model_version $nullableTextType,
         order_index $nullableIntType,
-        meta $nullableTextType
+        meta $nullableTextType,
+        calendar_event_id $nullableTextType,
+        calendar_id $nullableTextType,
+        calendar_mode $nullableTextType,
+        synced_at $nullableIntType,
+        sync_status $nullableTextType,
+        notification_id $nullableIntType,
+        notification_mode $nullableTextType
       )
     ''');
 
@@ -293,6 +301,23 @@ class DatabaseHelper {
     if (oldVersion < 8) {
       await _rebuildTodoItemTableWithoutConfidence(db);
     }
+
+    if (oldVersion < 9) {
+      await db.execute('ALTER TABLE todo_item ADD COLUMN description TEXT');
+    }
+
+    if (oldVersion < 10) {
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN calendar_event_id TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN calendar_id TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN calendar_mode TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN synced_at INTEGER');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN sync_status TEXT');
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN notification_id INTEGER');
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN notification_mode TEXT');
+    }
   }
 
   Future<void> _rebuildTodoItemTableWithoutConfidence(Database db) async {
@@ -305,6 +330,7 @@ class DatabaseHelper {
         CREATE TABLE todo_item (
           id TEXT PRIMARY KEY,
           text TEXT NOT NULL,
+          description TEXT,
           raw_text TEXT,
           created_at INTEGER NOT NULL,
           updated_at INTEGER,
@@ -323,7 +349,14 @@ class DatabaseHelper {
           error_message TEXT,
           model_version TEXT,
           order_index INTEGER,
-          meta TEXT
+          meta TEXT,
+          calendar_event_id TEXT,
+          calendar_id TEXT,
+          calendar_mode TEXT,
+          synced_at INTEGER,
+          sync_status TEXT,
+          notification_id INTEGER,
+          notification_mode TEXT
         )
       ''');
 
@@ -349,7 +382,14 @@ class DatabaseHelper {
           error_message,
           model_version,
           order_index,
-          meta
+          meta,
+          calendar_event_id,
+          calendar_id,
+          calendar_mode,
+          synced_at,
+          sync_status,
+          notification_id,
+          notification_mode
         )
         SELECT
           id,
@@ -372,7 +412,14 @@ class DatabaseHelper {
           error_message,
           model_version,
           order_index,
-          meta
+          meta,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL
         FROM todo_item_old
       ''');
 

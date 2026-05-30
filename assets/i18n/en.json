@@ -2,6 +2,10 @@
   "app": {
     "title": "AudioNotes"
   },
+  "notification": {
+    "todoReminder": "Todo reminder",
+    "dueAt": "Due: {date}"
+  },
   "common": {
     "enabled": "Enabled",
     "disabled": "Disabled",
@@ -31,6 +35,16 @@
       "languageSubtitle": "Switch application language",
       "langZhCn": "简体中文",
       "langEn": "English"
+    },
+    "notification": {
+      "title": "Reminder Mode",
+      "current": "Current reminder mode",
+      "none": "Disabled",
+      "local": "Local notifications",
+      "calendar": "Calendar sync",
+      "permissionHint": "Local reminders require notification permission",
+      "permissionGranted": "Notification permission is enabled",
+      "permissionDenied": "Notification permission is required for local reminders"
     },
     "appearance": {
       "themeColor": "Theme Color",
@@ -94,6 +108,7 @@
       "completedAggregation": "Completed aggregation",
       "sort": "Sort",
       "trashRetention": "Trash retention",
+      "notificationMode": "Reminder mode",
       "model": "Model",
       "trailingPeriodRemoval": "Trailing period removal",
       "autoSelect": "Auto",

@@ -8,6 +8,7 @@ import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../models/todo_query_options.dart';
+import '../models/notification_mode.dart';
 import 'app_providers.dart';
 
 /// Provider for accessing settings repository
@@ -161,6 +162,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setLanguageCode(String languageCode) async {
     state = state.copyWith(languageCode: languageCode);
     await _saveSettings();
+  }
+
+  /// Set notification mode for reminders
+  Future<void> setNotificationMode(NotificationMode mode) async {
+    state = state.copyWith(notificationMode: mode);
+    await ref.read(reminderServiceProvider).setNotificationMode(mode);
   }
 }
 

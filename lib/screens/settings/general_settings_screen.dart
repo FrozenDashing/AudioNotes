@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_i18n.dart';
 import '../../providers/settings_provider.dart';
+import '../../widgets/settings/notification_mode_selector.dart';
 
 class GeneralSettingsScreen extends ConsumerWidget {
   const GeneralSettingsScreen({super.key});
@@ -56,6 +57,8 @@ class GeneralSettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          const NotificationModeSelector(),
         ],
       ),
     );

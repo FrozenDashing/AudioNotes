@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/todo_sort.dart';
 import '../models/todo_priority.dart';
+import '../models/notification_mode.dart';
 
 /// Enum for theme modes
 enum ThemeModeOption { system, light, dark, custom }
@@ -61,6 +62,9 @@ class SettingsState {
   /// Selected app language code (e.g. zh_CN, en)
   final String languageCode;
 
+  /// Notification mode for reminders
+  final NotificationMode notificationMode;
+
   SettingsState({
     required this.currentModelId,
     required this.autoModelSelect,
@@ -76,6 +80,7 @@ class SettingsState {
     this.autoRemoveTrailingPeriod = false,
     this.trashAutoPurgeInterval = TrashAutoPurgeInterval.sevenDays,
     this.languageCode = 'zh_CN',
+    this.notificationMode = NotificationMode.none,
   });
 
   /// Default settings
@@ -95,6 +100,7 @@ class SettingsState {
       autoRemoveTrailingPeriod: false,
       trashAutoPurgeInterval: TrashAutoPurgeInterval.sevenDays,
       languageCode: 'zh_CN',
+      notificationMode: NotificationMode.none,
     );
   }
 
@@ -114,6 +120,7 @@ class SettingsState {
     bool? autoRemoveTrailingPeriod,
     TrashAutoPurgeInterval? trashAutoPurgeInterval,
     String? languageCode,
+    NotificationMode? notificationMode,
   }) {
     return SettingsState(
       currentModelId: currentModelId ?? this.currentModelId,
@@ -133,6 +140,7 @@ class SettingsState {
       trashAutoPurgeInterval:
           trashAutoPurgeInterval ?? this.trashAutoPurgeInterval,
       languageCode: languageCode ?? this.languageCode,
+      notificationMode: notificationMode ?? this.notificationMode,
     );
   }
 }

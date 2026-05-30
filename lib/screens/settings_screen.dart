@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_i18n.dart';
 import '../models/settings_state.dart';
+import '../models/notification_mode.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../providers/settings_provider.dart';
@@ -43,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
               accentColor: Theme.of(context).colorScheme.primary,
               title: context.tr('settings.section.general'),
               subtitle:
-                  '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)}',
+                  '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)} · ${context.tr('settings.summary.notificationMode')}：${_notificationModeLabel(context, settings.notificationMode)}',
               onTap: () {
                 Navigator.push(
                   context,
@@ -158,6 +159,17 @@ class SettingsScreen extends ConsumerWidget {
       return context.tr('settings.general.langEn');
     }
     return context.tr('settings.general.langZhCn');
+  }
+
+  String _notificationModeLabel(BuildContext context, NotificationMode mode) {
+    return switch (mode) {
+      NotificationMode.none => context.tr('settings.notification.none'),
+      NotificationMode.local =>
+        '${context.tr('settings.notification.local')}（默认）',
+      NotificationMode.calendar => context.tr('settings.notification.calendar'),
+      NotificationMode.awesome =>
+        '${context.tr('settings.notification.local')}（默认）',
+    };
   }
 
   String _themeModeLabel(BuildContext context, ThemeModeOption mode) {

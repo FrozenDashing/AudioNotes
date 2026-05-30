@@ -2,42 +2,118 @@ import 'package:flutter/foundation.dart' as foundation;
 
 import '../data/reminder_repository.dart';
 import '../data/todo_repository.dart';
-import '../l10n/locale_text_lookup.dart';
+import '../models/notification_mode.dart';
 import '../models/todo_item.dart';
 import '../repositories/settings_repository.dart';
-import 'notification_service.dart';
+import 'awesome_notification_service.dart';
+import 'calendar_sync_service.dart';
 
 class ReminderService {
+  final ReminderRepository _reminderRepository;
+  final TodoRepository _todoRepository;
+  final SettingsRepository _settingsRepository;
+  final CalendarSyncService _calendarSyncService;
+  final AwesomeNotificationService _notificationService;
+
   ReminderService({
     required ReminderRepository reminderRepository,
     required TodoRepository todoRepository,
-    required NotificationService notificationService,
     required SettingsRepository settingsRepository,
+    required CalendarSyncService calendarSyncService,
+    required AwesomeNotificationService notificationService,
   })  : _reminderRepository = reminderRepository,
         _todoRepository = todoRepository,
-        _notificationService = notificationService,
-        _settingsRepository = settingsRepository;
+        _settingsRepository = settingsRepository,
+        _calendarSyncService = calendarSyncService,
+        _notificationService = notificationService;
 
-  final ReminderRepository _reminderRepository;
-  final TodoRepository _todoRepository;
-  final NotificationService _notificationService;
-  final SettingsRepository _settingsRepository;
+  NotificationMode _notificationMode = NotificationMode.none;
+
+  bool get _usesLocalNotifications =>
+      _notificationMode == NotificationMode.local ||
+      _notificationMode == NotificationMode.awesome;
 
   Future<void> initialize() async {
     await _notificationService.initialize();
+    await _loadNotificationMode();
+    await _ensureNotificationPermissionState();
     await syncPendingReminders();
   }
 
+  Future<void> setNotificationMode(NotificationMode mode) async {
+    _notificationMode = mode;
+    await _settingsRepository.saveNotificationMode(mode.stringValue);
+    await _syncAllTodosWithMode();
+  }
+
+  NotificationMode get notificationMode => _notificationMode;
+
+  Future<void> _ensureNotificationPermissionState() async {
+    final allowed = await _notificationService.isNotificationAllowed();
+    if (allowed) {
+      return;
+    }
+
+    final granted = await _notificationService.requestNotificationPermission();
+    if (!granted &&
+        (_notificationMode == NotificationMode.local ||
+            _notificationMode == NotificationMode.awesome)) {
+      await setNotificationMode(NotificationMode.none);
+    }
+  }
+
+  Future<void> _loadNotificationMode() async {
+    try {
+      final modeString = await _settingsRepository.loadNotificationMode();
+      _notificationMode = NotificationModeExtension.fromString(modeString);
+    } catch (error) {
+      foundation.debugPrint(
+        'Failed to load notification mode, defaulting to local: $error',
+      );
+      _notificationMode = NotificationMode.local;
+    }
+  }
+
+  Future<void> _syncAllTodosWithMode() async {
+    final todos = await _todoRepository.getAllTodos();
+    for (final todo in todos) {
+      if (todo.status == TodoStatus.completed) {
+        await clearReminder(todo.id);
+        continue;
+      }
+
+      if (todo.remindAt == null && todo.dueAt == null) {
+        await clearReminder(todo.id);
+        continue;
+      }
+
+      if (_notificationMode == NotificationMode.none) {
+        await clearReminder(todo.id);
+        continue;
+      }
+
+      if (_usesLocalNotifications) {
+        if (todo.remindAt == null) {
+          await clearReminder(todo.id);
+          continue;
+        }
+
+        await _cancelCalendarReminder(todo);
+        await _scheduleAwesomeNotification(todo);
+      } else {
+        await _cancelAwesomeNotification(todo);
+        await _cancelCalendarReminder(todo);
+        await _syncTodoWithCalendar(todo);
+      }
+    }
+  }
+
   Future<void> syncPendingReminders() async {
-    final languageCode = await _getLanguageCode();
     final reminders = await _reminderRepository.getAllReminders();
     for (final reminder in reminders) {
       final todoId = reminder['todo_id'] as String?;
-      final notificationId = reminder['notification_id'] as int?;
-      final remindAtValue = reminder['remind_at'] as int?;
       final fired = (reminder['fired'] as int? ?? 0) == 1;
-
-      if (todoId == null || notificationId == null || remindAtValue == null) {
+      if (todoId == null) {
         continue;
       }
 
@@ -47,22 +123,8 @@ class ReminderService {
         continue;
       }
 
-      final isPastOneTimeReminder = todo.repeatType == TodoRepeatType.none &&
-          todo.remindAt!.isBefore(DateTime.now());
-
-      final title = todo.text.isEmpty
-          ? await _lookup(languageCode, 'reminder.title')
-          : todo.text;
-      final body = await _buildReminderBody(todo, languageCode);
-
-      if (isPastOneTimeReminder) {
-        await _notificationService.showTodoReminder(
-          notificationId: notificationId,
-          title: title,
-          body: body,
-          payload: todo.id,
-        );
-        await markReminderFired(todoId);
+      if (_notificationMode == NotificationMode.none) {
+        await clearReminder(todoId);
         continue;
       }
 
@@ -70,79 +132,125 @@ class ReminderService {
         continue;
       }
 
-      await _notificationService.scheduleTodoReminder(
-        notificationId: notificationId,
-        title: title,
-        body: body,
-        remindAt: DateTime.fromMillisecondsSinceEpoch(remindAtValue),
-        repeatType: todo.repeatType,
-        payload: todo.id,
-      );
+      if (_usesLocalNotifications) {
+        await _scheduleAwesomeNotification(todo);
+      } else {
+        await _syncTodoWithCalendar(todo);
+      }
     }
   }
 
   Future<void> scheduleReminderForTodo(TodoItem todo) async {
-    final languageCode = await _getLanguageCode();
-    if (todo.remindAt == null) {
+    if (_notificationMode == NotificationMode.none) {
       await clearReminder(todo.id);
       return;
     }
 
-    final existing = await _reminderRepository.getReminderByTodoId(todo.id);
-    final notificationId = (existing?['notification_id'] as int?) ??
-        await _reminderRepository.nextNotificationId();
-    final reminderId = (existing?['id'] as String?) ?? todo.id;
+    if (_usesLocalNotifications) {
+      if (todo.remindAt == null) {
+        await clearReminder(todo.id);
+        return;
+      }
 
-    await _reminderRepository.upsertReminder(
-      reminderId: reminderId,
-      todoId: todo.id,
-      notificationId: notificationId,
-      remindAt: todo.remindAt!,
-      fired: 0,
-    );
-
-    if (todo.repeatType == TodoRepeatType.none &&
-        todo.remindAt!.isBefore(DateTime.now())) {
-      final title = todo.text.isEmpty
-          ? await _lookup(languageCode, 'reminder.title')
-          : todo.text;
-      final body = await _buildReminderBody(todo, languageCode);
-      await _notificationService.showTodoReminder(
-        notificationId: notificationId,
-        title: title,
-        body: body,
-        payload: todo.id,
-      );
-      await markReminderFired(todo.id);
+      await _cancelCalendarReminder(todo);
+      await _scheduleAwesomeNotification(todo);
       return;
     }
 
-    final title = todo.text.isEmpty
-        ? await _lookup(languageCode, 'reminder.title')
-        : todo.text;
-    final body = await _buildReminderBody(todo, languageCode);
+    if (todo.remindAt == null && todo.dueAt == null) {
+      await clearReminder(todo.id);
+      return;
+    }
 
-    await _notificationService.scheduleTodoReminder(
-      notificationId: notificationId,
-      title: title,
-      body: body,
-      remindAt: todo.remindAt!,
-      repeatType: todo.repeatType,
-      payload: todo.id,
-    );
+    await _cancelAwesomeNotification(todo);
+    await _syncTodoWithCalendar(todo);
+  }
+
+  Future<void> updateReminderForTodo(TodoItem todo) async {
+    await scheduleReminderForTodo(todo);
   }
 
   Future<void> clearReminder(String todoId) async {
-    final existing = await _reminderRepository.getReminderByTodoId(todoId);
-    final notificationId = existing?['notification_id'] as int?;
+    await _notificationService.cancelTodoNotification(todoId);
 
-    if (notificationId != null) {
-      await _notificationService.cancel(notificationId);
+    final todo = await _todoRepository.getTodoById(todoId);
+    if (todo != null) {
+      await _cancelCalendarReminder(todo);
     }
 
-    await _notificationService.cancelByPayload(todoId);
-
     await _reminderRepository.deleteReminderByTodoId(todoId);
+  }
+
+  Future<void> _scheduleAwesomeNotification(TodoItem todo) async {
+    try {
+      await _notificationService.createTodoNotification(todo);
+      final notificationId =
+          _notificationService.getNotificationIdForTodo(todo.id);
+      await _reminderRepository.upsertReminder(
+        reminderId: todo.id,
+        todoId: todo.id,
+        notificationId: notificationId,
+        remindAt: todo.remindAt!,
+        fired: 0,
+      );
+
+      final updatedTodo = todo.copyWith(
+        notificationId: notificationId,
+        notificationMode: NotificationMode.local.stringValue,
+        syncedAt: DateTime.now(),
+      );
+      await _todoRepository.updateTodo(updatedTodo);
+    } catch (error) {
+      foundation.debugPrint('Failed to schedule awesome notification: $error');
+    }
+  }
+
+  Future<void> _cancelAwesomeNotification(TodoItem todo) async {
+    try {
+      await _notificationService.cancelTodoNotification(todo.id);
+
+      final updatedTodo = todo.copyWith(
+        notificationId: null,
+        notificationMode: null,
+        syncedAt: null,
+      );
+      await _todoRepository.updateTodo(updatedTodo);
+    } catch (error) {
+      foundation.debugPrint('Failed to cancel awesome notification: $error');
+    }
+  }
+
+  Future<void> _syncTodoWithCalendar(TodoItem todo) async {
+    try {
+      final status = await _calendarSyncService.syncTodoWithCalendar(todo);
+      final updatedTodo = todo.copyWith(
+        calendarMode: _notificationMode.stringValue,
+        syncStatus: status.name,
+        syncedAt: DateTime.now(),
+      );
+      await _todoRepository.updateTodo(updatedTodo);
+    } catch (error) {
+      foundation.debugPrint('Failed to sync todo with calendar: $error');
+    }
+  }
+
+  Future<void> _cancelCalendarReminder(TodoItem todo) async {
+    try {
+      if (todo.calendarEventId == null) {
+        return;
+      }
+
+      await _calendarSyncService.removeTodoFromCalendar(todo);
+      final updatedTodo = todo.copyWith(
+        calendarEventId: null,
+        calendarMode: null,
+        syncStatus: 'cancelled',
+        syncedAt: DateTime.now(),
+      );
+      await _todoRepository.updateTodo(updatedTodo);
+    } catch (error) {
+      foundation.debugPrint('Failed to cancel calendar reminder: $error');
+    }
   }
 
   Future<void> markReminderFired(String todoId) async {
@@ -151,53 +259,5 @@ class ReminderService {
     if (notificationId != null) {
       await _reminderRepository.markReminderFired(notificationId);
     }
-  }
-
-  Future<String> _buildReminderBody(TodoItem todo, String languageCode) async {
-    final parts = <String>[];
-    if (todo.dueAt != null) {
-      final dueLabel = await _lookup(languageCode, 'reminder.dueLabel');
-      parts.add('$dueLabel ${_formatDateTime(todo.dueAt!)}');
-    }
-    if (todo.repeatType != TodoRepeatType.none) {
-      parts.add(await _repeatLabel(todo.repeatType, languageCode));
-    }
-    if (parts.isEmpty) {
-      return _lookup(languageCode, 'reminder.onTime');
-    }
-    return parts.join(' · ');
-  }
-
-  Future<String> _repeatLabel(
-      TodoRepeatType repeatType, String languageCode) async {
-    final key = switch (repeatType) {
-      TodoRepeatType.daily => 'reminder.repeat.daily',
-      TodoRepeatType.weekly => 'reminder.repeat.weekly',
-      TodoRepeatType.none => 'reminder.repeat.none',
-    };
-    return _lookup(languageCode, key);
-  }
-
-  Future<String> _getLanguageCode() async {
-    try {
-      final settings = await _settingsRepository.loadSettings();
-      return settings.languageCode;
-    } catch (e) {
-      foundation.debugPrint(
-          'Failed to load reminder language, defaulting to zh_CN: $e');
-      return 'zh_CN';
-    }
-  }
-
-  Future<String> _lookup(String languageCode, String key) {
-    return LocaleTextLookup.tr(languageCode, key);
-  }
-
-  String _formatDateTime(DateTime value) {
-    final month = value.month.toString().padLeft(2, '0');
-    final day = value.day.toString().padLeft(2, '0');
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '${value.year}-$month-$day $hour:$minute';
   }
 }

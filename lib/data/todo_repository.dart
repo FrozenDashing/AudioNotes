@@ -282,6 +282,11 @@ class TodoRepository {
     return _dbHelper.getTodoById(id);
   }
 
+  /// Update a todo item
+  Future<void> updateTodo(TodoItem todo) async {
+    await _dbHelper.updateTodo(todo);
+  }
+
   /// Get todos currently in the trash.
   Future<List<TodoItem>> getDeletedTodos() async {
     return await _dbHelper.getDeletedTodos();
