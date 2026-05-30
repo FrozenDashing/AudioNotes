@@ -14,6 +14,7 @@ import '../services/reminder_service.dart';
 import '../services/calendar_sync_service.dart';
 import '../services/todo_grouping_service.dart';
 import '../services/settings_service.dart';
+import '../services/widget_sync_service.dart';
 import '../data/todo_repository.dart';
 import '../data/reminder_repository.dart';
 import '../data/category_repository.dart';
@@ -60,6 +61,11 @@ final todoGroupingServiceProvider = Provider<TodoGroupingService>((ref) {
 /// Provider for settings service
 final settingsServiceProvider = Provider<SettingsService>((ref) {
   return SettingsService();
+});
+
+/// Provider for widget sync service.
+final widgetSyncServiceProvider = Provider<WidgetSyncService>((ref) {
+  return WidgetSyncService();
 });
 
 /// Provider for tag list
@@ -336,6 +342,10 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     return _repository.getTodos(_queryOptions);
   }
 
+  void _syncWidgets(List<TodoItem> todos) {
+    unawaited(ref.read(widgetSyncServiceProvider).syncTodoSummary(todos));
+  }
+
   /// Get currently selected todo IDs
   Set<String> get selectedIds => _selectedIds;
 
@@ -415,6 +425,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             )
         : todos;
     state = AsyncValue.data(sortedTodos);
+    _syncWidgets(sortedTodos);
     // Refresh batch tags cache for list view
     unawaited(ref.read(todoTagsCacheNotifierProvider.notifier).refreshForTodos(
           sortedTodos.map((t) => t.id).toList(),
@@ -517,6 +528,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
           .toList(growable: false);
 
       state = AsyncValue.data(List<TodoItem>.from(updatedTodos));
+      _syncWidgets(updatedTodos);
     } finally {
       _statusUpdatingIds.remove(id);
     }
@@ -535,6 +547,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             .map((todo) => todo.id == id ? updated : todo)
             .toList(growable: false);
         state = AsyncValue.data(updatedTodos);
+        _syncWidgets(updatedTodos);
         return;
       }
     }
@@ -563,6 +576,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
           .map((todo) => todo.id == id ? refreshed : todo)
           .toList(growable: false);
       state = AsyncValue.data(updatedTodos);
+      _syncWidgets(updatedTodos);
     } else {
       await loadTodos();
     }
@@ -593,6 +607,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             .map((todo) => todo.id == id ? updated : todo)
             .toList(growable: false);
         state = AsyncValue.data(updatedTodos);
+        _syncWidgets(updatedTodos);
         return;
       }
     }
@@ -625,26 +640,19 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             .map((todo) => todo.id == id ? updated : todo)
             .toList(growable: false);
         state = AsyncValue.data(updatedTodos);
-        return updated;
+        _syncWidgets(updatedTodos);
+      } else {
+        await loadTodos();
       }
+    } else {
+      await loadTodos();
     }
 
-    // Fallback to full reload if local update fails
     final refreshed = await _repository.getTodoById(id);
     if (refreshed == null) {
-      await loadTodos();
       return result;
     }
 
-    if (currentValue == null) {
-      await loadTodos();
-      return refreshed;
-    }
-
-    final updatedTodos = currentValue
-        .map((todo) => todo.id == id ? refreshed : todo)
-        .toList(growable: false);
-    state = AsyncValue.data(updatedTodos);
     try {
       await ref
           .read(reminderServiceProvider)
@@ -667,6 +675,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
             .map((todo) => todo.id == id ? updated : todo)
             .toList(growable: false);
         state = AsyncValue.data(updatedTodos);
+        _syncWidgets(updatedTodos);
         return updated;
       }
     }
@@ -687,6 +696,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .map((todo) => todo.id == id ? refreshed : todo)
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
+    _syncWidgets(updatedTodos);
     return refreshed;
   }
 
@@ -752,6 +762,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .map((todo) => updatedById[todo.id] ?? todo)
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
+    _syncWidgets(updatedTodos);
 
     if (!sameGroupByCategory) {
       await _repository.updateCategory(id, targetCategoryId);
@@ -763,10 +774,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Delete a todo
   Future<void> deleteTodo(String id) async {
+    final todo = await _repository.getTodoById(id);
+    if (todo == null) {
+      await loadTodos();
+      return;
+    }
+
     await ref.read(reminderServiceProvider).clearReminder(id);
-    await _repository.deleteTodo(id);
-    // Refresh trash list so deleted item appears immediately in Trash UI
-    await ref.read(trashTodosProvider.notifier).loadTrash();
+
+    if (_shouldHardDeleteTodo(todo)) {
+      await _repository.purgeTodoPermanently(id);
+    } else {
+      await _repository.deleteTodo(id);
+      // Refresh trash list so deleted item appears immediately in Trash UI
+      await ref.read(trashTodosProvider.notifier).loadTrash();
+    }
 
     // Try to remove locally if we have current state
     final currentValue = state.value;
@@ -774,6 +796,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       final updatedTodos =
           currentValue.where((todo) => todo.id != id).toList(growable: false);
       state = AsyncValue.data(updatedTodos);
+      _syncWidgets(updatedTodos);
       return;
     }
 
@@ -783,9 +806,22 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Delete multiple todos
   Future<void> deleteTodos(List<String> ids) async {
+    final todoMap = <String, TodoItem>{};
+    for (final id in ids) {
+      final todo = await _repository.getTodoById(id);
+      if (todo != null) {
+        todoMap[id] = todo;
+      }
+    }
+
     for (final id in ids) {
       await ref.read(reminderServiceProvider).clearReminder(id);
-      await _repository.deleteTodo(id);
+      final todo = todoMap[id];
+      if (todo != null && _shouldHardDeleteTodo(todo)) {
+        await _repository.purgeTodoPermanently(id);
+      } else {
+        await _repository.deleteTodo(id);
+      }
     }
     _selectedIds.clear();
     // Ensure trash list is up-to-date after batch delete
@@ -798,6 +834,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
           .where((todo) => !ids.contains(todo.id))
           .toList(growable: false);
       state = AsyncValue.data(updatedTodos);
+      _syncWidgets(updatedTodos);
       return;
     }
 
@@ -826,12 +863,21 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .toList();
 
     for (final id in completedIds) {
+      final todo = await _repository.getTodoById(id);
       await ref.read(reminderServiceProvider).clearReminder(id);
-      await _repository.deleteTodo(id);
+      if (todo != null && _shouldHardDeleteTodo(todo)) {
+        await _repository.purgeTodoPermanently(id);
+      } else {
+        await _repository.deleteTodo(id);
+      }
     }
     // Refresh trash after removing completed items
     await ref.read(trashTodosProvider.notifier).loadTrash();
     await loadTodos();
+  }
+
+  bool _shouldHardDeleteTodo(TodoItem todo) {
+    return todo.text.trim().isEmpty || todo.taskState == TodoTaskState.failed;
   }
 
   /// Reorder todos
@@ -855,6 +901,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     await dbHelper.updateOrderIndices(orderMap);
 
     state = AsyncValue.data(items);
+    _syncWidgets(items);
   }
 
   /// Reorder todos within a single category group.
@@ -892,6 +939,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .map((todo) => updatedById[todo.id] ?? todo)
         .toList(growable: false);
     state = AsyncValue.data(updatedTodos);
+    _syncWidgets(updatedTodos);
 
     final dbHelper = ref.read(databaseHelperProvider);
     await dbHelper.updateOrderIndices(orderMap);
@@ -943,6 +991,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     await dbHelper.updateOrderIndices(orderMap);
 
     state = AsyncValue.data(updatedItems);
+    _syncWidgets(updatedItems);
   }
 }
 

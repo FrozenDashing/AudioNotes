@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' as foundation;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_i18n.dart';
 import 'screens/home_screen.dart';
 import 'models/settings_state.dart';
-import 'providers/settings_provider.dart';
 import 'providers/app_providers.dart';
+import 'providers/settings_provider.dart';
 import 'services/awesome_notification_service.dart';
 
 void main() async {
@@ -29,6 +31,8 @@ class AudioNotesApp extends ConsumerStatefulWidget {
 }
 
 class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
+  static const MethodChannel _launchChannel =
+      MethodChannel('com.audionotes/launch');
   final FlutterI18nDelegate _i18nDelegate = FlutterI18nDelegate(
     translationLoader: FileTranslationLoader(
       basePath: 'assets/i18n',
@@ -40,10 +44,22 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
   @override
   void initState() {
     super.initState();
+    _launchChannel.setMethodCallHandler(_handleLaunchMethodCall);
+    unawaited(_consumeWidgetRecordingLaunch());
     unawaited(_initializeServices());
   }
 
+  Future<void> _handleLaunchMethodCall(MethodCall call) async {
+    if (call.method != 'startRecordingFromWidget') {
+      return;
+    }
+
+    await _consumeWidgetRecordingLaunch();
+  }
+
   Future<void> _initializeServices() async {
+    final todoRepository = ref.read(todoRepositoryProvider);
+
     try {
       await ref.read(reminderServiceProvider).initialize();
 
@@ -60,7 +76,6 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
           },
         );
 
-        final todoRepository = ref.read(todoRepositoryProvider);
         final deletedTodos = await todoRepository.getDeletedTodos();
         for (final todo in deletedTodos) {
           final deletedAt = todo.deletedAt;
@@ -72,6 +87,32 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
       }
     } catch (e) {
       foundation.debugPrint('Reminder service initialization failed: $e');
+    }
+
+    try {
+      final todos = await todoRepository.getAllTodos(sortByOrder: true);
+      await ref.read(widgetSyncServiceProvider).syncTodoSummary(todos);
+    } catch (e) {
+      foundation.debugPrint('Widget sync initialization failed: $e');
+    }
+
+    await _consumeWidgetRecordingLaunch();
+  }
+
+  Future<void> _consumeWidgetRecordingLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final shouldStartRecording =
+        prefs.getBool('flutter.widget.launch.recording') ?? false;
+    if (!shouldStartRecording || !mounted) {
+      return;
+    }
+
+    await prefs.setBool('flutter.widget.launch.recording', false);
+    final recordingNotifier = ref.read(recordingStateProvider.notifier);
+    if (ref.read(recordingStateProvider) == RecordingState.idle) {
+      unawaited(recordingNotifier.start().catchError((error) {
+        foundation.debugPrint('Widget launch recording failed: $error');
+      }));
     }
   }
 

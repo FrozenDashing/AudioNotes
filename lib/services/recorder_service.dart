@@ -59,4 +59,15 @@ class RecorderService {
       return false;
     }
   }
+
+  /// Start recording from widget intent
+  Future<bool> startRecordingFromIntent() async {
+    try {
+      final result = await _channel.invokeMethod('startRecordingFromIntent');
+      return result == true;
+    } on PlatformException catch (e) {
+      foundation.debugPrint('Failed to start recording from intent: ${e.message}');
+      return false;
+    }
+  }
 }

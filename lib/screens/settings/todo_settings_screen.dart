@@ -48,6 +48,24 @@ class TodoSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _SectionCard(
+            title: context.tr('settings.todo.quickTextTodo'),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(context.tr('settings.todo.quickTextTodoTitle')),
+              subtitle: Text(
+                context.tr('settings.todo.quickTextTodoSubtitle'),
+                style: theme.textTheme.bodySmall,
+              ),
+              value: settings.enableQuickTextTodo,
+              onChanged: (value) {
+                ref
+                    .read(settingsProvider.notifier)
+                    .setEnableQuickTextTodo(value);
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
             title: context.tr('settings.todo.aggregateCompleted'),
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,

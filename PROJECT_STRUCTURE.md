@@ -18,8 +18,9 @@ AudioNotes/
 │   │       └── profile/        # Profile configuration
 │   ├── gradle.properties       # Gradle configuration
 │   └── gradlew.bat             # Gradle wrapper (Windows)
-├── assets/                     # Static assets (models, images)
-│   └── models/                 # Vosk ASR models (not in repo, downloaded separately)
+├── assets/                     # Static assets (models, i18n)
+│   ├── models/                 # Vosk ASR models (not in repo, downloaded separately)
+│   └── i18n/                   # Internationalization files (en.json, zh_CN.json)
 ├── devlogs/                    # Development logs and planning documents
 │   ├── issues/                 # Issue tracking and solutions
 │   │   └── kotlin_cache_error.md
@@ -38,7 +39,7 @@ AudioNotes/
 ├── ios/                        # iOS native implementation
 │   ├── Flutter/                # Flutter engine files
 │   └── Runner/                 # iOS app source code (Swift)
-├── lib/                        # Main Flutter application source code
+├── lib/                        # Main Flutter application source code (Clean Architecture)
 │   ├── data/                   # Data sources and database helpers
 │   │   ├── category_repository.dart
 │   │   ├── database_helper.dart
@@ -48,7 +49,9 @@ AudioNotes/
 │   │   └── todo_repository.dart
 │   ├── domain/                 # Business logic and use cases
 │   │   └── usecases/
-│   │       └── create_todo_from_recording_usecase.dart
+│   │       ├── create_todo_from_recording_usecase.dart
+│   │       ├── create_todo_from_text_usecase.dart # Text input use case
+│   │       └── sync_calendar_usecase.dart # Calendar sync use case
 │   ├── models/                 # Data models
 │   │   ├── category.dart       # Category model
 │   │   ├── model_metadata.dart # Model metadata for ASR models
@@ -57,16 +60,20 @@ AudioNotes/
 │   │   ├── tag.dart           # Tag model
 │   │   ├── todo_drag_data.dart # Drag and drop data model
 │   │   ├── todo_group.dart    # Todo group model for category grouping
-│   │   ├── todo_item.dart     # Todo item model
+│   │   ├── todo_item.dart     # Todo item model (comprehensive with priority, due dates, etc.)
 │   │   ├── todo_priority.dart # Todo priority model
 │   │   ├── todo_query_options.dart # Query options model
-│   │   └── todo_sort.dart     # Sorting model
+│   │   ├── todo_sort.dart     # Sorting model
+│   │   ├── widget_config.dart # Widget configuration model
+│   │   └── calendar_event.dart # Calendar event sync model
 │   ├── providers/              # Riverpod state providers
 │   │   ├── app_providers.dart  # Main app providers
-│   │   └── settings_provider.dart # Settings provider
+│   │   ├── settings_provider.dart # Settings provider
+│   │   └── widget_provider.dart # Widget state provider
 │   ├── repositories/           # Data abstraction layer
 │   │   ├── model_repository.dart # Model metadata repository
-│   │   └── settings_repository.dart # Settings repository
+│   │   ├── settings_repository.dart # Settings repository
+│   │   └── calendar_repository.dart # Calendar sync repository
 │   ├── screens/                # UI screens
 │   │   ├── settings/           # Settings-related screens
 │   │   │   └── ... 3 files, 0 dirs not shown
@@ -76,7 +83,10 @@ AudioNotes/
 │   │   ├── model_selection_screen.dart # Model selection screen
 │   │   ├── settings_screen.dart # Settings screen
 │   │   ├── tag_create_screen.dart # Tag creation screen
-│   │   └── tag_picker_screen.dart # Tag selection screen
+│   │   ├── tag_picker_screen.dart # Tag selection screen
+│   │   ├── trash_screen.dart  # Deleted items management screen
+│   │   ├── text_input_screen.dart # Manual text input screen
+│   │   └── widget_config_screen.dart # Widget configuration screen
 │   ├── services/               # Business logic services
 │   │   ├── asr_platform_service.dart # ASR platform service
 │   │   ├── audio_playback_service.dart # Audio playback service
@@ -86,10 +96,17 @@ AudioNotes/
 │   │   ├── recorder_service.dart # Recording service
 │   │   ├── reminder_service.dart # Reminder service
 │   │   ├── settings_service.dart # Settings service
-│   │   └── todo_grouping_service.dart # Todo grouping service for category organization
+│   │   ├── todo_grouping_service.dart # Todo grouping service for category organization
+│   │   ├── awesome_notification_service.dart # Enhanced notifications
+│   │   ├── calendar_sync_service.dart # Calendar integration
+│   │   ├── widget_sync_service.dart # Widget synchronization
+│   │   ├── text_input_service.dart # Text input processing service
+│   │   └── widget_service.dart # Widget management service
 │   ├── utils/                  # Utility functions
 │   │   ├── audio_chunker.dart  # Audio chunking utilities
-│   │   └── audio_file_cleanup.dart # Audio file cleanup utilities
+│   │   ├── audio_file_cleanup.dart # Audio file cleanup utilities
+│   │   ├── text_formatter.dart # Text formatting utilities
+│   │   └── widget_helper.dart # Widget helper utilities
 │   ├── widgets/                # Reusable UI components
 │   │   ├── audio_player_widget.dart # Audio player widget
 │   │   ├── completed_text.dart # Completed text widget
@@ -98,7 +115,11 @@ AudioNotes/
 │   │   ├── recording_overlay.dart # Recording overlay widget
 │   │   ├── theme_color_picker.dart # Theme color picker widget
 │   │   ├── todo_group_section.dart # Todo group section widget for category grouping
-│   │   └── todo_item_card.dart # Todo item card widget
+│   │   ├── todo_item_card.dart # Todo item card widget
+│   │   ├── text_input_widget.dart # Text input widget for manual todo creation
+│   │   ├── home_widget.dart # Home screen widget for quick access
+│   │   ├── widget_configuration.dart # Widget configuration UI
+│   │   └── calendar_sync_widget.dart # Calendar sync status widget
 │   └── main.dart               # Application entry point
 ├── review/                     # Project review and analysis documents
 ├── test/                       # Test files
@@ -116,10 +137,11 @@ AudioNotes/
 ├── CONTRIBUTING.md             # Contribution guidelines
 ├── PROJECT_STRUCTURE.md        # Project structure documentation
 ├── QUICK_START.md              # Quick start guide
-├── README.md                   # Main project documentation
+├── README.md                   # Main project documentation (with Chinese version link)
+├── README_ZH.md                # Chinese version documentation
 ├── analysis_options.yaml       # Dart analysis configuration
 ├── devtools_options.yaml       # DevTools configuration
-└── pubspec.yaml                # Project dependencies and assets
+└── pubspec.yaml                # Project dependencies and assets (version 3.2.7+1)
 ```
 
 ## Key Directories and Files Explained

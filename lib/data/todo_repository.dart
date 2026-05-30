@@ -44,6 +44,33 @@ class TodoRepository {
     return insertRecognizing(audioPath: audioPath, text: text);
   }
 
+  /// Insert a pure text todo (quick text input)
+  Future<TodoItem> insertTextTodo({
+    required String text,
+    TodoPriority priority = TodoPriority.normal,
+  }) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty) {
+      throw ArgumentError('text must not be empty');
+    }
+
+    final orderIndex = await _dbHelper.getNextOrderIndex();
+
+    final todo = TodoItem(
+      id: _uuid.v4(),
+      text: normalized,
+      rawTranscript: '',
+      createdAt: DateTime.now(),
+      audioPath: null,
+      taskState: TodoTaskState.ready,
+      status: TodoStatus.pending,
+      priority: priority,
+      orderIndex: orderIndex,
+    );
+
+    return await _dbHelper.insertTodo(todo);
+  }
+
   /// Update todo to recognizing state
   Future<void> updateToRecognizing(
     String id, {
@@ -121,15 +148,10 @@ class TodoRepository {
   Future<void> updateText(String id, String newText) async {
     final todo = await _dbHelper.getTodoById(id);
     if (todo == null) return;
-
     final trimmedText = newText.trim();
-    final updatedText = trimmedText.isEmpty &&
-            (todo.rawTranscript != null && todo.rawTranscript!.isNotEmpty)
-        ? todo.rawTranscript!
-        : trimmedText;
 
     final updated = todo.copyWith(
-      text: updatedText,
+      text: trimmedText,
       updatedAt: DateTime.now(),
     );
     await _dbHelper.updateTodo(updated);

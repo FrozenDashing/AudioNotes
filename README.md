@@ -1,5 +1,9 @@
 # AudioNotes - Offline Speech-to-Text Todo Application
 
+[中文版](./README_ZH.md) | English Version
+
+AudioNotes is an offline-first mobile application that converts speech into actionable todo items using Vosk Automatic Speech Recognition (ASR). Designed for productivity, it allows users to record thoughts hands-free and automatically generates organized todo lists without requiring internet connectivity. The application features category-based grouping, advanced todo management, and comprehensive organizational tools to maximize efficiency.
+
 AudioNotes is an offline-first mobile application that converts speech into actionable todo items using Vosk Automatic Speech Recognition (ASR). Designed for productivity, it allows users to record thoughts hands-free and automatically generates organized todo lists without requiring internet connectivity. The application features category-based grouping, advanced todo management, and comprehensive organizational tools to maximize efficiency.
 
 ## 🚀 Features
@@ -11,6 +15,9 @@ AudioNotes is an offline-first mobile application that converts speech into acti
 - **Smart Todo Creation**: Converts spoken thoughts into structured todo items with timestamps
 - **Audio Playback**: Each todo includes the original audio recording for reference
 - **Todo Management**: Create, edit, reorder, and complete tasks with intuitive UI
+- **Optional Text Input**: Alternative manual input mode for todo creation with rich text formatting
+- **Desktop Widget Support**: Home screen widgets for quick access to recent todos and recording functionality
+- **System Calendar Integration**: Full synchronization with system calendar events with two-way sync
 
 ### Advanced Organization
 - **Category Grouping**: Todo items organized into collapsible category groups (with "Uncategorized" for items without categories)
@@ -70,6 +77,10 @@ AudioNotes is an offline-first mobile application that converts speech into acti
 - `equatable`: Object comparison
 - `json_annotation`: JSON serialization
 - `http`: Network requests for model downloads
+- `flutter_widget_wrapper`: Desktop widget support
+- `device_calendar_plus`: System calendar integration
+- `flutter_text_input`: Rich text input capabilities
+- `widget_launcher`: Home screen widget management
 
 ## 🏗️ Architecture
 
@@ -93,13 +104,23 @@ AudioNotes follows Clean Architecture principles with three main layers, enhance
 
 ## 📱 Usage
 
-1. **Start Recording**: Tap the recording button to begin speaking
-2. **Automatic Segmentation**: The app detects pauses to separate thoughts
-3. **Real-time Transcription**: See partial results as you speak
-4. **Todo Creation**: Completed segments automatically become todo items
-5. **Category Organization**: Assign todos to categories or let uncategorized items go to the default group
-6. **Manage Tasks**: Edit, complete, or play back original audio for each item
-7. **Customize**: Adjust settings like theme, font size, model selection, and notification preferences
+1. **Choose Input Method**: Select between speech recognition or manual text input in settings
+2. **Speech Mode**:
+   - **Start Recording**: Tap the recording button to begin speaking
+   - **Automatic Segmentation**: The app detects pauses to separate thoughts
+   - **Real-time Transcription**: See partial results as you speak
+   - **Todo Creation**: Completed segments automatically become todo items
+3. **Text Mode**:
+   - **Manual Input**: Tap the text input button to create todos manually
+   - **Rich Text**: Format text with bold, italic, and other options
+   - **Quick Add**: Use quick input for simple todos
+   - **Advanced Options**: Set priority, due date, and categories during creation
+4. **Organization**:
+   - **Category Organization**: Assign todos to categories or let uncategorized items go to the default group
+   - **Calendar Sync**: Sync important todos with system calendar
+   - **Widget Access**: Use home screen widgets for quick access to recent todos
+5. **Task Management**: Edit, complete, or play back original audio for each item
+6. **Customization**: Adjust settings like theme, font size, model selection, notification preferences, and widget options
 
 ## 🛠️ Development Setup
 

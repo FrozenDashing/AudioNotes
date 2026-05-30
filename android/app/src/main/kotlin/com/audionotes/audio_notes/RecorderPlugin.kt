@@ -55,13 +55,79 @@ class RecorderPlugin : FlutterPlugin, MethodCallHandler {
         context = binding.applicationContext
     }
 
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel.setMethodCallHandler(null)
+    }
+
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "startRecording" -> handleStartRecording(result)
             "stopRecording" -> handleStopRecording(result)
             "cancelRecording" -> handleCancelRecording(result)
             "isRecording" -> handleIsRecording(result)
+            "startRecordingFromIntent" -> handleStartRecordingFromIntent(result)
             else -> result.notImplemented()
+        }
+    }
+
+    private fun handleStartRecordingFromIntent(result: Result) {
+        if (!checkPermission()) {
+            result.error("PERMISSION_DENIED", "Microphone permission not granted", null)
+            return
+        }
+        
+        if (isRecording) {
+            result.error("ALREADY_RECORDING", "Already recording", null)
+            return
+        }
+        
+        try {
+            // Create WAV file
+            val file = createRecordingFile()
+            wavFilePath = file.absolutePath
+            
+            Log.d(TAG, "Starting recording from intent to: ${wavFilePath}")
+            
+            // Initialize AudioRecord
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                bufferSize
+            )
+            
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                throw IllegalStateException("AudioRecord initialization failed")
+            }
+            
+            // Write WAV header (will be updated later with actual size)
+            writeWavHeader(file, 0)
+            
+            // Start recording
+            audioRecord?.startRecording()
+            isRecording = true
+            
+            // Start recording thread
+            recordingThread = Thread {
+                val buffer = ByteArray(bufferSize)
+                val outputStream = FileOutputStream(file, true)
+                
+                while (isRecording) {
+                    val readSize = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                    if (readSize > 0) {
+                        outputStream.write(buffer, 0, readSize)
+                    }
+                }
+                
+                outputStream.close()
+            }
+            
+            recordingThread?.start()
+            result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start recording from intent", e)
+            result.error("RECORDING_FAILED", "Failed to start recording: ${e.message}", null)
         }
     }
 
@@ -179,36 +245,15 @@ class RecorderPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleCancelRecording(result: Result) {
-        if (isRecording) {
-            isRecording = false
-            
-            try {
-                recordingThread?.join(500)
-            } catch (e: InterruptedException) {
-                Log.e(TAG, "Interrupted while canceling", e)
-            }
-            
-            try {
-                audioRecord?.stop()
-                audioRecord?.release()
-                audioRecord = null
-            } catch (e: Exception) {
-                Log.e(TAG, "Error releasing resources", e)
-            }
+        if (!isRecording) {
+            result.success(true)
+            return
         }
         
-        // Delete the WAV file
-        val filePath = wavFilePath
-        if (filePath != null) {
-            try {
-                File(filePath).delete()
-                Log.d(TAG, "Recording cancelled, file deleted")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error deleting file", e)
-            }
-        }
-        
-        wavFilePath = null
+        isRecording = false
+        audioRecord?.stop()
+        recordingThread?.interrupt()
+        recordingThread = null
         result.success(true)
     }
 
@@ -316,14 +361,4 @@ class RecorderPlugin : FlutterPlugin, MethodCallHandler {
         )
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel.setMethodCallHandler(null)
-        if (isRecording) {
-            handleCancelRecording(object : Result {
-                override fun success(result: Any?) {}
-                override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {}
-                override fun notImplemented() {}
-            })
-        }
-    }
 }
