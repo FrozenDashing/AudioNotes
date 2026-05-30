@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -25,7 +26,7 @@ enum PlatformEvent {
 
   final String value;
   const PlatformEvent(this.value);
-  
+
   static PlatformEvent? fromValue(String value) {
     return PlatformEvent.values.firstWhere(
       (e) => e.value == value,
@@ -79,26 +80,27 @@ class AudioConfig {
 /// Service for communicating with native platform code
 class ASRPlatformService {
   static const MethodChannel _channel = MethodChannel('com.audionotes/asr');
-  
+
   final _eventController = StreamController<Map<String, dynamic>>.broadcast();
-  
+
   /// Stream of all platform events
   Stream<Map<String, dynamic>> get eventStream => _eventController.stream;
-  
+
   /// Stream of partial transcripts
   Stream<PartialTranscript> get partialTranscriptStream {
     return eventStream
-        .where((event) => event['event'] == PlatformEvent.partialTranscript.value)
+        .where(
+            (event) => event['event'] == PlatformEvent.partialTranscript.value)
         .map((event) => PartialTranscript.fromMap(event));
   }
-  
+
   /// Stream of final speech segments
   Stream<SpeechSegment> get finalSegmentStream {
     return eventStream
         .where((event) => event['event'] == PlatformEvent.finalSegment.value)
         .map((event) => SpeechSegment.fromMap(event));
   }
-  
+
   /// Stream of errors
   Stream<String> get errorStream {
     return eventStream
@@ -118,7 +120,7 @@ class ASRPlatformService {
         _eventController.add(event);
       }
     } catch (e) {
-      print('Error handling method call: $e');
+      foundation.debugPrint('Error handling method call: $e');
     }
   }
 
@@ -127,16 +129,16 @@ class ASRPlatformService {
     try {
       // Request microphone permission first
       final status = await Permission.microphone.request();
-      
+
       if (!status.isGranted) {
-        print('Microphone permission denied');
+        foundation.debugPrint('Microphone permission denied');
         return false;
       }
-      
+
       final result = await _channel.invokeMethod('start', config.toMap());
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to start recording: ${e.message}');
+      foundation.debugPrint('Failed to start recording: ${e.message}');
       return false;
     }
   }
@@ -147,7 +149,7 @@ class ASRPlatformService {
       final result = await _channel.invokeMethod('stop');
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to stop recording: ${e.message}');
+      foundation.debugPrint('Failed to stop recording: ${e.message}');
       return false;
     }
   }
@@ -158,7 +160,7 @@ class ASRPlatformService {
       final result = await _channel.invokeMethod('cancel');
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to cancel recording: ${e.message}');
+      foundation.debugPrint('Failed to cancel recording: ${e.message}');
       return false;
     }
   }
@@ -166,10 +168,11 @@ class ASRPlatformService {
   /// Re-record a specific segment by ID
   Future<bool> reRecordSegment(String segmentId) async {
     try {
-      final result = await _channel.invokeMethod('reRecord', {'segment_id': segmentId});
+      final result =
+          await _channel.invokeMethod('reRecord', {'segment_id': segmentId});
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to re-record segment: ${e.message}');
+      foundation.debugPrint('Failed to re-record segment: ${e.message}');
       return false;
     }
   }
@@ -177,10 +180,11 @@ class ASRPlatformService {
   /// Configure VAD parameters
   Future<bool> setVADConfig(VADConfig config) async {
     try {
-      final result = await _channel.invokeMethod('setVADParams', config.toMap());
+      final result =
+          await _channel.invokeMethod('setVADParams', config.toMap());
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to set VAD config: ${e.message}');
+      foundation.debugPrint('Failed to set VAD config: ${e.message}');
       return false;
     }
   }
@@ -191,7 +195,7 @@ class ASRPlatformService {
       final result = await _channel.invokeMethod('reloadModel');
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to reload model: ${e.message}');
+      foundation.debugPrint('Failed to reload model: ${e.message}');
       return false;
     }
   }

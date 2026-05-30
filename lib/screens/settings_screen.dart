@@ -210,7 +210,19 @@ class SettingsScreen extends ConsumerWidget {
       SortDirection.asc => context.tr('settings.todo.sort.asc'),
       SortDirection.desc => context.tr('settings.todo.sort.desc'),
     };
-    return '$field / $direction';
+    final trash = switch (settings.trashAutoPurgeInterval) {
+      TrashAutoPurgeInterval.oneDay =>
+        context.tr('settings.todo.trashRetentionOptions.oneDay'),
+      TrashAutoPurgeInterval.threeDays =>
+        context.tr('settings.todo.trashRetentionOptions.threeDays'),
+      TrashAutoPurgeInterval.sevenDays =>
+        context.tr('settings.todo.trashRetentionOptions.sevenDays'),
+      TrashAutoPurgeInterval.thirtyDays =>
+        context.tr('settings.todo.trashRetentionOptions.thirtyDays'),
+      TrashAutoPurgeInterval.never =>
+        context.tr('settings.todo.trashRetentionOptions.never'),
+    };
+    return '$field / $direction · $trash';
   }
 
   String _syncSummary(BuildContext context, WidgetRef ref) {

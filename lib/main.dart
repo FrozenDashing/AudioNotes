@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_i18n.dart';
 import 'screens/home_screen.dart';
-import 'services/settings_service.dart';
+import 'models/settings_state.dart';
 import 'providers/settings_provider.dart';
 import 'providers/app_providers.dart';
 
@@ -50,15 +51,39 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
     try {
       await ref.read(notificationServiceProvider).initialize();
       await ref.read(reminderServiceProvider).syncPendingReminders();
+
+      final settingsRepository = ref.read(settingsRepositoryProvider);
+      final settings = await settingsRepository.loadSettings();
+      if (settings.trashAutoPurgeInterval != TrashAutoPurgeInterval.never) {
+        final cutoff = DateTime.now().subtract(
+          switch (settings.trashAutoPurgeInterval) {
+            TrashAutoPurgeInterval.oneDay => const Duration(days: 1),
+            TrashAutoPurgeInterval.threeDays => const Duration(days: 3),
+            TrashAutoPurgeInterval.sevenDays => const Duration(days: 7),
+            TrashAutoPurgeInterval.thirtyDays => const Duration(days: 30),
+            TrashAutoPurgeInterval.never => Duration.zero,
+          },
+        );
+
+        final todoRepository = ref.read(todoRepositoryProvider);
+        final deletedTodos = await todoRepository.getDeletedTodos();
+        for (final todo in deletedTodos) {
+          final deletedAt = todo.deletedAt;
+          if (deletedAt != null && deletedAt.isBefore(cutoff)) {
+            await ref.read(reminderServiceProvider).clearReminder(todo.id);
+            await todoRepository.purgeTodoPermanently(todo.id);
+          }
+        }
+      }
     } catch (e) {
-      debugPrint('Reminder service initialization failed: $e');
+      foundation.debugPrint('Reminder service initialization failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    final settingsService = SettingsService();
+    final settingsService = ref.watch(settingsServiceProvider);
     final systemScale = MediaQuery.textScalerOf(context).scale(1.0);
     final effectiveTextScale = settingsService.getEffectiveTextScaleFactor(
       settings,

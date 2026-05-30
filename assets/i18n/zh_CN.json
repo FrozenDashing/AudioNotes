@@ -53,6 +53,14 @@
       "aggregateCompleted": "已完成聚合",
       "aggregateCompletedTitle": "聚合已完成待办",
       "aggregateCompletedSubtitle": "开启后，所有已完成待办将集中到“已完成”分组。",
+      "trashRetention": "垃圾桶自动清理间隔",
+      "trashRetentionOptions": {
+        "oneDay": "1 天",
+        "threeDays": "3 天",
+        "sevenDays": "7 天",
+        "thirtyDays": "30 天",
+        "never": "永不"
+      },
       "priority": {
         "low": "低",
         "normal": "普通",
@@ -85,6 +93,7 @@
       "defaultPriority": "默认优先级",
       "completedAggregation": "已完成聚合",
       "sort": "排序",
+      "trashRetention": "垃圾桶保留",
       "model": "模型",
       "trailingPeriodRemoval": "句尾句号去除",
       "autoSelect": "自动选择",
@@ -185,7 +194,8 @@
       "clearAll": "全不选"
     },
     "menu": {
-      "more": "更多"
+      "more": "更多",
+      "trash": "垃圾桶"
     },
     "empty": {
       "title": "暂无笔记",
@@ -291,5 +301,17 @@
       "listening": "聆听中...",
       "hint": "请对着麦克风清晰说话"
     }
+  },
+  "trash": {
+    "title": "垃圾桶",
+    "emptyTitle": "垃圾桶为空",
+    "emptySubtitle": "被删除的待办会先保留在这里，便于恢复或自动清理。",
+    "deletedAt": "删除于 {time}",
+    "restore": "恢复",
+    "purge": "永久删除",
+    "clearAll": "清空垃圾桶",
+    "clearAllTitle": "清空垃圾桶？",
+    "clearAllContent": "此操作会永久删除所有已删除的待办，无法恢复。",
+    "clearAllAction": "清空"
   }
 }

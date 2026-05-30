@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
@@ -5,6 +6,10 @@ import 'package:archive/archive.dart';
 
 /// Vosk model information
 class VoskModel {
+  static const String chineseSmallModelName = 'vosk-model-small-cn-0.22';
+  static const String chineseSmallDownloadUrl =
+      'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip';
+
   final String name;
   final String language;
   final String version;
@@ -35,11 +40,10 @@ class VoskModel {
 
   factory VoskModel.chineseSmall() {
     return const VoskModel(
-      name: 'vosk-model-small-cn-0.22',
+      name: chineseSmallModelName,
       language: 'zh-CN',
       version: '0.22',
-      downloadUrl:
-          'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip',
+      downloadUrl: chineseSmallDownloadUrl,
       sizeMB: 45,
     );
   }
@@ -54,7 +58,7 @@ class ModelManagerService {
       final modelPath = Directory('${appDir.path}/$modelName');
       return await modelPath.exists();
     } catch (e) {
-      print('Error checking model: $e');
+      foundation.debugPrint('Error checking model: $e');
       return false;
     }
   }
@@ -69,7 +73,7 @@ class ModelManagerService {
       }
       return null;
     } catch (e) {
-      print('Error getting model path: $e');
+      foundation.debugPrint('Error getting model path: $e');
       return null;
     }
   }
@@ -141,7 +145,7 @@ class ModelManagerService {
 
       yield 1.0;
     } catch (e) {
-      print('Error downloading model: $e');
+      foundation.debugPrint('Error downloading model: $e');
       throw Exception('Failed to download model: $e');
     }
   }
@@ -158,7 +162,7 @@ class ModelManagerService {
       }
       return false;
     } catch (e) {
-      print('Error deleting model: $e');
+      foundation.debugPrint('Error deleting model: $e');
       return false;
     }
   }
@@ -166,11 +170,13 @@ class ModelManagerService {
   /// Get available storage space
   Future<int> getAvailableStorage() async {
     try {
-      // This is approximate - actual implementation may vary by platform
-      return 1073741824; // Return 1GB as default
+      // Use platform storage utility for real available space
+      final available = await getFreeBytes();
+      return available;
     } catch (e) {
-      print('Error getting storage: $e');
-      return 0;
+      foundation.debugPrint('Error getting storage: $e');
+      // Fallback: assume at least 100MB available for conservative UI behavior
+      return 100 * 1024 * 1024;
     }
   }
 

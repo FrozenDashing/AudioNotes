@@ -19,6 +19,7 @@ class SettingsRepository {
   static const String _aggregateCompletedTodosKey = 'aggregate_completed_todos';
   static const String _autoRemoveTrailingPeriodKey =
       'auto_remove_trailing_period';
+  static const String _trashAutoPurgeIntervalKey = 'trash_auto_purge_interval';
   static const String _languageCodeKey = 'language_code';
 
   /// Load settings from shared preferences
@@ -67,6 +68,12 @@ class SettingsRepository {
           prefs.getBool(_aggregateCompletedTodosKey) ?? false,
       autoRemoveTrailingPeriod:
           prefs.getBool(_autoRemoveTrailingPeriodKey) ?? false,
+      trashAutoPurgeInterval: TrashAutoPurgeInterval.values.firstWhere(
+        (e) =>
+            e.toString().split('.')[1] ==
+            (prefs.getString(_trashAutoPurgeIntervalKey) ?? 'sevenDays'),
+        orElse: () => TrashAutoPurgeInterval.sevenDays,
+      ),
       languageCode: prefs.getString(_languageCodeKey) ?? 'zh_CN',
     );
   }
@@ -110,6 +117,10 @@ class SettingsRepository {
     result = result &&
         await prefs.setBool(
             _autoRemoveTrailingPeriodKey, settings.autoRemoveTrailingPeriod);
+
+    result = result &&
+        await prefs.setString(_trashAutoPurgeIntervalKey,
+            settings.trashAutoPurgeInterval.toString().split('.')[1]);
 
     result = result &&
         await prefs.setString(_languageCodeKey, settings.languageCode);

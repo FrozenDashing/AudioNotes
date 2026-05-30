@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
 /// Wrapper around webdav_client for basic file operations on WebDAV.
@@ -49,7 +50,7 @@ class WebDavClientWrapper {
     try {
       await _client!.mkdirAll(_remoteDir);
     } catch (e) {
-      // Directory may already exist, which is fine
+      foundation.debugPrint('WebDAV mkdirAll ignored: $e');
     }
   }
 
@@ -79,7 +80,8 @@ class WebDavClientWrapper {
       try {
         final files = await _client!.readDir(_remoteDir);
         return files.any((entry) => entry.path?.split('/').last == filename);
-      } catch (_) {
+      } catch (innerError) {
+        foundation.debugPrint('WebDAV fileExists fallback failed: $innerError');
         return false;
       }
     }
@@ -102,6 +104,7 @@ class WebDavClientWrapper {
           .where((name) => name.isNotEmpty)
           .toList();
     } catch (e) {
+      foundation.debugPrint('WebDAV listFiles failed: $e');
       return [];
     }
   }
@@ -113,6 +116,7 @@ class WebDavClientWrapper {
       await _client!.readDir('/');
       return true;
     } catch (e) {
+      foundation.debugPrint('WebDAV testConnection failed: $e');
       return false;
     }
   }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' as foundation;
+
 import '../data/reminder_repository.dart';
 import '../data/todo_repository.dart';
 import '../l10n/locale_text_lookup.dart';
@@ -180,7 +182,9 @@ class ReminderService {
     try {
       final settings = await _settingsRepository.loadSettings();
       return settings.languageCode;
-    } catch (_) {
+    } catch (e) {
+      foundation.debugPrint(
+          'Failed to load reminder language, defaulting to zh_CN: $e');
       return 'zh_CN';
     }
   }

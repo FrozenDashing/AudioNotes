@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import '../l10n/app_i18n.dart';
 
 import '../models/category.dart';
@@ -83,8 +84,8 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
         return;
       }
       setState(() => _isExpanded = persisted);
-    } catch (_) {
-      // Ignore persistence errors and keep UI responsive.
+    } catch (e) {
+      foundation.debugPrint('Failed to load expanded state: $e');
     }
   }
 
@@ -105,8 +106,8 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
         final map = await svc.loadExpandedMap();
         final updated = {...map, widget.group.groupKey: _isExpanded};
         await svc.saveExpandedMap(updated);
-      } catch (_) {
-        // ignore errors; do not block UI
+      } catch (e) {
+        foundation.debugPrint('Failed to save expanded state: $e');
       }
     });
   }

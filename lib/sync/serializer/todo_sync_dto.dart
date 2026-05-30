@@ -22,7 +22,6 @@ class TodoSyncDto {
   final int? completedAt;
   final int? deletedAt;
   final int? orderIndex;
-  final double? confidence;
   final List<String> tagIds;
 
   const TodoSyncDto({
@@ -43,7 +42,6 @@ class TodoSyncDto {
     this.completedAt,
     this.deletedAt,
     this.orderIndex,
-    this.confidence,
     this.tagIds = const [],
   });
 
@@ -65,7 +63,6 @@ class TodoSyncDto {
         'completedAt': completedAt,
         'deletedAt': deletedAt,
         'orderIndex': orderIndex,
-        'confidence': confidence,
         'tagIds': tagIds,
       };
 
@@ -87,7 +84,6 @@ class TodoSyncDto {
         completedAt: json['completedAt'] as int?,
         deletedAt: json['deletedAt'] as int?,
         orderIndex: json['orderIndex'] as int?,
-        confidence: (json['confidence'] as num?)?.toDouble(),
         tagIds: List<String>.from(json['tagIds'] as List? ?? []),
       );
 
@@ -112,7 +108,6 @@ class TodoSyncDto {
       completedAt: item.completedAt?.millisecondsSinceEpoch,
       deletedAt: item.deletedAt?.millisecondsSinceEpoch,
       orderIndex: item.orderIndex,
-      confidence: item.confidence,
       tagIds: tagIds,
     );
   }
@@ -145,7 +140,6 @@ class TodoSyncDto {
           ? DateTime.fromMillisecondsSinceEpoch(deletedAt!)
           : null,
       orderIndex: orderIndex,
-      confidence: confidence,
     );
   }
 }

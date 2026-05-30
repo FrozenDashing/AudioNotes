@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
 import '../client/webdav_client_wrapper.dart';
@@ -69,7 +70,7 @@ class SyncNotifier extends Notifier<SyncState> {
         }
       }
     } catch (e) {
-      // Ignore config load errors on init
+      foundation.debugPrint('Failed to load WebDAV config on init: $e');
     }
   }
 
@@ -101,6 +102,7 @@ class SyncNotifier extends Notifier<SyncState> {
 
       return true;
     } catch (e) {
+      foundation.debugPrint('Failed to configure WebDAV: $e');
       state = state.copyWith(
         status: SyncStatus.error,
         errorMessage: e.toString(),
@@ -114,6 +116,7 @@ class SyncNotifier extends Notifier<SyncState> {
     try {
       return await _coordinator.testConnection();
     } catch (e) {
+      foundation.debugPrint('WebDAV test connection failed: $e');
       return false;
     }
   }
@@ -129,6 +132,7 @@ class SyncNotifier extends Notifier<SyncState> {
       ref.invalidate(categoryListProvider);
       ref.invalidate(tagListProvider);
       ref.invalidate(tagsForTodoProvider);
+      ref.invalidate(todoTagsCacheNotifierProvider);
     }
 
     state = state.copyWith(

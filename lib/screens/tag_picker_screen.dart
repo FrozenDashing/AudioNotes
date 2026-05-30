@@ -58,6 +58,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
                             if (created != null && context.mounted) {
                               ref.invalidate(tagListProvider);
                               ref.invalidate(tagsForTodoProvider);
+                              ref.invalidate(todoTagsCacheNotifierProvider);
                             }
                           },
                         );
@@ -196,6 +197,7 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
     await ref.read(tagRepositoryProvider).updateTag(tag.copyWith(name: name));
     ref.invalidate(tagListProvider);
     ref.invalidate(tagsForTodoProvider);
+    ref.invalidate(todoTagsCacheNotifierProvider);
   }
 
   Future<void> _deleteTag(BuildContext context, Tag tag) async {
@@ -231,5 +233,6 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
     });
     ref.invalidate(tagListProvider);
     ref.invalidate(tagsForTodoProvider);
+    ref.invalidate(todoTagsCacheNotifierProvider);
   }
 }

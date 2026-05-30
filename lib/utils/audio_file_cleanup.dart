@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
@@ -30,16 +31,18 @@ class AudioFileCleanup {
         if (!validPathSet.contains(file.path)) {
           try {
             await file.delete();
-            print('Deleted orphaned audio file: ${file.path}');
+            foundation.debugPrint('Deleted orphaned audio file: ${file.path}');
           } catch (e) {
-            print('Error deleting orphaned file ${file.path}: $e');
+            foundation
+                .debugPrint('Error deleting orphaned file ${file.path}: $e');
           }
         }
       }
 
-      print('Audio cleanup completed. Checked ${wavFiles.length} files.');
+      foundation.debugPrint(
+          'Audio cleanup completed. Checked ${wavFiles.length} files.');
     } catch (e) {
-      print('Error during audio cleanup: $e');
+      foundation.debugPrint('Error during audio cleanup: $e');
     }
   }
 
@@ -63,7 +66,7 @@ class AudioFileCleanup {
 
       return totalSize;
     } catch (e) {
-      print('Error calculating audio size: $e');
+      foundation.debugPrint('Error calculating audio size: $e');
       return 0;
     }
   }
@@ -76,10 +79,10 @@ class AudioFileCleanup {
 
       if (await recordingsDir.exists()) {
         await recordingsDir.delete(recursive: true);
-        print('All audio files deleted');
+        foundation.debugPrint('All audio files deleted');
       }
     } catch (e) {
-      print('Error deleting all audio files: $e');
+      foundation.debugPrint('Error deleting all audio files: $e');
     }
   }
 }

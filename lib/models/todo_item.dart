@@ -52,23 +52,6 @@ enum TodoRepeatType {
   }
 }
 
-/// Confidence level for ASR results
-enum ConfidenceLevel {
-  low(0),
-  medium(1),
-  high(2);
-
-  final int value;
-  const ConfidenceLevel(this.value);
-
-  static ConfidenceLevel fromValue(double? confidence) {
-    if (confidence == null) return ConfidenceLevel.medium;
-    if (confidence < 0.5) return ConfidenceLevel.low;
-    if (confidence < 0.8) return ConfidenceLevel.medium;
-    return ConfidenceLevel.high;
-  }
-}
-
 /// Represents a single todo item generated from speech recognition
 class TodoItem {
   final String id;
@@ -88,11 +71,9 @@ class TodoItem {
   final bool pinned;
   final DateTime? completedAt;
   final DateTime? deletedAt;
-  final int? durationMs; // Audio duration in milliseconds
   final String? errorMessage; // Error message if recognition failed
   final String? modelVersion; // Vosk model version used
   final int? orderIndex;
-  final double? confidence;
   final String? meta;
 
   const TodoItem({
@@ -113,11 +94,9 @@ class TodoItem {
     this.pinned = false,
     this.completedAt,
     this.deletedAt,
-    this.durationMs,
     this.errorMessage,
     this.modelVersion,
     this.orderIndex,
-    this.confidence,
     this.meta,
   });
 
@@ -151,11 +130,9 @@ class TodoItem {
       deletedAt: json['deleted_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['deleted_at'] as int)
           : null,
-      durationMs: json['duration_ms'] as int?,
       errorMessage: json['error_message'] as String?,
       modelVersion: json['model_version'] as String?,
       orderIndex: json['order_index'] as int?,
-      confidence: json['confidence'] as double?,
       meta: json['meta'] as String?,
     );
   }
@@ -180,11 +157,9 @@ class TodoItem {
       'pinned': pinned ? 1 : 0,
       'completed_at': completedAt?.millisecondsSinceEpoch,
       'deleted_at': deletedAt?.millisecondsSinceEpoch,
-      'duration_ms': durationMs,
       'error_message': errorMessage,
       'model_version': modelVersion,
       'order_index': orderIndex,
-      'confidence': confidence,
       'meta': meta,
     };
   }
@@ -208,11 +183,9 @@ class TodoItem {
     bool? pinned,
     DateTime? completedAt,
     DateTime? deletedAt,
-    int? durationMs,
     String? errorMessage,
     String? modelVersion,
     int? orderIndex,
-    double? confidence,
     String? meta,
   }) {
     return TodoItem(
@@ -233,11 +206,9 @@ class TodoItem {
       pinned: pinned ?? this.pinned,
       completedAt: completedAt ?? this.completedAt,
       deletedAt: deletedAt ?? this.deletedAt,
-      durationMs: durationMs ?? this.durationMs,
       errorMessage: errorMessage ?? this.errorMessage,
       modelVersion: modelVersion ?? this.modelVersion,
       orderIndex: orderIndex ?? this.orderIndex,
-      confidence: confidence ?? this.confidence,
       meta: meta ?? this.meta,
     );
   }

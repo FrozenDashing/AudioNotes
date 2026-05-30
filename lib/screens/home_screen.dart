@@ -11,6 +11,7 @@ import '../widgets/recording_overlay.dart';
 import '../widgets/todo_group_section.dart';
 import '../widgets/floating_action_toolbar.dart';
 import 'settings_screen.dart';
+import 'trash_screen.dart';
 import '../services/model_manager_service.dart';
 import '../services/recognition_service.dart';
 import '../models/todo_sort.dart';
@@ -18,7 +19,7 @@ import '../models/todo_query_options.dart';
 import '../providers/settings_provider.dart';
 import '../utils/motion.dart';
 
-enum _HomeMenuAction { sort, toggleSelection }
+enum _HomeMenuAction { sort, toggleSelection, trash }
 
 /// Main home screen displaying the todo list
 class HomeScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isModelReady = false;
   bool _isCheckingModel = true;
-  Map<String, int> _groupOrderMap = {};
 
   void _showSortSheet() {
     final settings = ref.read(settingsProvider);
@@ -240,37 +240,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _checkModelStatus();
-    unawaited(_loadGroupOrder());
   }
 
-  /// Update stored group order map safely within this State.
+  /// Update stored group order map by writing to the global provider.
   void updateGroupOrderMap(Map<String, int> newMap) {
-    if (!mounted) return;
-    setState(() {
-      _groupOrderMap = newMap;
-    });
-    // Also update global provider so group order is used when building groups
     try {
       ref.read(groupOrderMapProvider.notifier).setMap(newMap);
-    } catch (_) {
-      // ignore if provider unavailable
-    }
-  }
-
-  Future<void> _loadGroupOrder() async {
-    final orderMap =
-        await ref.read(todoGroupingServiceProvider).loadGroupOrderMap();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _groupOrderMap = orderMap;
-    });
-    // set global provider as well
-    try {
-      ref.read(groupOrderMapProvider.notifier).setMap(orderMap);
-    } catch (_) {
-      // ignore
+    } catch (e) {
+      debugPrint('Failed to update group order provider: $e');
     }
   }
 
@@ -281,9 +258,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Check if small Chinese model is downloaded (faster to download)
     final hasSmallModel =
-        await modelManager.isModelDownloaded('vosk-model-small-cn-0.22');
+        await modelManager.isModelDownloaded(VoskModel.chineseSmallModelName);
     final hasLargeModel =
-        await modelManager.isModelDownloaded('vosk-model-cn-0.22');
+        await modelManager.isModelDownloaded(VoskModel.chineseLarge().name);
 
     setState(() {
       _isModelReady = hasSmallModel || hasLargeModel;
@@ -322,7 +299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final groupOrderMap = _groupOrderMap;
+    final groupOrderMap = ref.watch(groupOrderMapProvider);
     final todoNotifier = ref.read(todoListProvider.notifier);
     final isSelectionMode = todoNotifier.isSelectionMode;
     final todos = ref.watch(todoListProvider).maybeWhen(
@@ -368,6 +345,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     case _HomeMenuAction.toggleSelection:
                       todoNotifier.enableSelectionMode();
                       break;
+                    case _HomeMenuAction.trash:
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TrashScreen(),
+                        ),
+                      );
+                      break;
                   }
                 },
                 itemBuilder: (context) => [
@@ -396,6 +381,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(context.tr('home.selection.title')),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: _HomeMenuAction.trash,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(context.tr('home.menu.trash')),
                       ],
                     ),
                   ),
@@ -546,7 +545,7 @@ class _TodoListContent extends ConsumerWidget {
         if (oldIndex == newIndex) {
           return;
         }
-        final groupingService = ref.read(todoGroupingServiceProvider);
+        final groupOrderNotifier = ref.read(groupOrderMapProvider.notifier);
         final previousOrderMap = Map<String, int>.from(groupOrderMap);
         // compute new order of keys
         final orderedKeys = List<String>.from(groupKeys);
@@ -560,8 +559,9 @@ class _TodoListContent extends ConsumerWidget {
         // Optimistically update first to avoid visible snap-back/flicker.
         onGroupOrderChanged(updatedOrderMap);
         try {
-          await groupingService.saveGroupOrderMap(updatedOrderMap);
-        } catch (_) {
+          await groupOrderNotifier.saveMap(updatedOrderMap);
+        } catch (e) {
+          debugPrint('Failed to save group order map: $e');
           onGroupOrderChanged(previousOrderMap);
         }
       },
@@ -645,20 +645,18 @@ class _TodoListContent extends ConsumerWidget {
   }
 }
 
-/// Recording overlay wrapper - only rebuilds when recording state or partial text changes
+/// Recording overlay wrapper - only rebuilds when recording state changes
 class _RecordingOverlayWrapper extends ConsumerWidget {
   const _RecordingOverlayWrapper();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recordingState = ref.watch(recordingStateProvider);
-    final partialText = ref.watch(partialTranscriptProvider);
 
     if (recordingState == RecordingState.recording ||
         recordingState == RecordingState.recognizing) {
       return RecordingOverlay(
         isProcessing: recordingState == RecordingState.recognizing,
-        partialText: partialText,
       );
     }
 
@@ -704,12 +702,12 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     super.dispose();
   }
 
-  void _onTapDown(_) {
+  void _onTapDown(TapDownDetails details) {
     _scaleController.forward();
     HapticFeedback.lightImpact();
   }
 
-  void _onTapUp(_) {
+  void _onTapUp(TapUpDetails details) {
     _scaleController.reverse();
   }
 
@@ -799,7 +797,7 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     _scaleController.reverse();
     // Async operation, but we don't await to keep UI responsive
     notifier.stop().catchError((error) {
-      print('Stop recording error: $error');
+      debugPrint('Stop recording error: $error');
     });
   }
 }

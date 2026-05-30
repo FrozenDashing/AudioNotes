@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:io';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,7 +48,7 @@ class ModelRepository {
       }
       return syncedModels;
     } catch (e) {
-      print('Error parsing model metadata: $e');
+      foundation.debugPrint('Error parsing model metadata: $e');
       final defaults = await _syncDownloadState(_defaultModels());
       await saveAllModels(defaults);
       return defaults;
@@ -63,7 +64,7 @@ class ModelRepository {
       final jsonString = json.encode(jsonList);
       return await prefs.setString(_modelsKey, jsonString);
     } catch (e) {
-      print('Error saving model metadata: $e');
+      foundation.debugPrint('Error saving model metadata: $e');
       return false;
     }
   }
@@ -129,7 +130,7 @@ class ModelRepository {
         await modelDirectory.delete(recursive: true);
       }
     } catch (e) {
-      print('Error deleting model files: $e');
+      foundation.debugPrint('Error deleting model files: $e');
     }
   }
 

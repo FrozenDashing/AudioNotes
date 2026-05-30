@@ -53,6 +53,14 @@
       "aggregateCompleted": "Completed Aggregation",
       "aggregateCompletedTitle": "Group completed todos",
       "aggregateCompletedSubtitle": "When enabled, all completed todos are grouped under Completed.",
+      "trashRetention": "Trash auto-purge interval",
+      "trashRetentionOptions": {
+        "oneDay": "1 day",
+        "threeDays": "3 days",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days",
+        "never": "Never"
+      },
       "priority": {
         "low": "Low",
         "normal": "Normal",
@@ -85,6 +93,7 @@
       "defaultPriority": "Default priority",
       "completedAggregation": "Completed aggregation",
       "sort": "Sort",
+      "trashRetention": "Trash retention",
       "model": "Model",
       "trailingPeriodRemoval": "Trailing period removal",
       "autoSelect": "Auto",
@@ -185,7 +194,8 @@
       "clearAll": "Clear selection"
     },
     "menu": {
-      "more": "More"
+      "more": "More",
+      "trash": "Trash"
     },
     "empty": {
       "title": "No notes",
@@ -291,5 +301,17 @@
       "listening": "Listening...",
       "hint": "Speak clearly into the microphone"
     }
+  },
+  "trash": {
+    "title": "Trash",
+    "emptyTitle": "Trash is empty",
+    "emptySubtitle": "Deleted todos stay here first so you can restore or auto-purge them.",
+    "deletedAt": "Deleted {time}",
+    "restore": "Restore",
+    "purge": "Delete permanently",
+    "clearAll": "Empty trash",
+    "clearAllTitle": "Empty trash?",
+    "clearAllContent": "This will permanently delete all trashed todos and cannot be undone.",
+    "clearAllAction": "Empty"
   }
 }

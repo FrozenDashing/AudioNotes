@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
@@ -38,7 +39,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       if (ref.mounted) {
         state = SettingsState.initial();
       }
-      debugPrint('Error loading settings: $e');
+      foundation.debugPrint('Error loading settings: $e');
     }
   }
 
@@ -46,7 +47,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     try {
       await _repository.saveSettings(state);
     } catch (e) {
-      debugPrint('Error saving settings: $e');
+      foundation.debugPrint('Error saving settings: $e');
     }
   }
 
@@ -146,6 +147,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
   /// Toggle auto-removal of trailing sentence-ending period in recognition text
   Future<void> setAutoRemoveTrailingPeriod(bool enabled) async {
     state = state.copyWith(autoRemoveTrailingPeriod: enabled);
+    await _saveSettings();
+  }
+
+  /// Set trash auto-purge retention interval.
+  Future<void> setTrashAutoPurgeInterval(
+      TrashAutoPurgeInterval interval) async {
+    state = state.copyWith(trashAutoPurgeInterval: interval);
     await _saveSettings();
   }
 

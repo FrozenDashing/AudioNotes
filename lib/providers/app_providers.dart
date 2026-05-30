@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import '../data/database_helper.dart';
 import '../models/todo_item.dart';
 import '../services/recorder_service.dart';
@@ -11,11 +12,13 @@ import '../services/model_manager_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
 import '../services/todo_grouping_service.dart';
+import '../services/settings_service.dart';
 import '../data/todo_repository.dart';
 import '../data/reminder_repository.dart';
 import '../data/category_repository.dart';
 import '../data/tag_repository.dart';
 import '../models/todo_group.dart';
+import '../models/settings_state.dart';
 import '../domain/usecases/create_todo_from_recording_usecase.dart';
 import '../models/category.dart';
 import '../models/tag.dart';
@@ -53,6 +56,11 @@ final todoGroupingServiceProvider = Provider<TodoGroupingService>((ref) {
   return TodoGroupingService();
 });
 
+/// Provider for settings service
+final settingsServiceProvider = Provider<SettingsService>((ref) {
+  return SettingsService();
+});
+
 /// Provider for tag list
 final tagListProvider = FutureProvider<List<Tag>>((ref) {
   return ref.read(tagRepositoryProvider).getTags();
@@ -63,6 +71,50 @@ final tagsForTodoProvider =
     FutureProvider.family<List<Tag>, String>((ref, todoId) {
   return ref.read(tagRepositoryProvider).getTagsForTodo(todoId);
 });
+
+/// Batch cache of todo_id -> tags mapping to reduce N database queries in list view
+final tagsByTodoIdProvider = Provider<Map<String, List<Tag>>>((ref) {
+  // Provider is a simple cache map; it should be cleared/refreshed by notifiers when tags change
+  return <String, List<Tag>>{};
+});
+
+final todoTagsCacheNotifierProvider =
+    NotifierProvider<TodoTagsCacheNotifier, Map<String, List<Tag>>>(() {
+  return TodoTagsCacheNotifier();
+});
+
+class TodoTagsCacheNotifier extends Notifier<Map<String, List<Tag>>> {
+  late final TagRepository _tagRepo;
+
+  @override
+  Map<String, List<Tag>> build() {
+    _tagRepo = ref.read(tagRepositoryProvider);
+    return <String, List<Tag>>{};
+  }
+
+  Future<void> refreshForTodos(List<String> todoIds) async {
+    if (todoIds.isEmpty) {
+      state = <String, List<Tag>>{};
+      return;
+    }
+    final mapping = await _tagRepo.getTagsForTodos(todoIds);
+    state = mapping;
+  }
+
+  void invalidate() {
+    state = <String, List<Tag>>{};
+  }
+
+  void invalidateFor(String todoId) {
+    if (state.containsKey(todoId)) {
+      final next = Map<String, List<Tag>>.from(state);
+      next.remove(todoId);
+      state = next;
+    }
+  }
+
+  List<Tag>? get(String todoId) => state[todoId];
+}
 
 /// Provider for notification service
 final notificationServiceProvider = Provider<NotificationService>((ref) {
@@ -105,7 +157,6 @@ final modelManagerServiceProvider = Provider<ModelManagerService>((ref) {
 final createTodoUseCaseProvider =
     Provider<CreateTodoFromRecordingUseCase>((ref) {
   return CreateTodoFromRecordingUseCase(
-    recorder: ref.read(recorderServiceProvider),
     recognition: ref.read(recognitionServiceProvider),
     repository: ref.read(todoRepositoryProvider),
     settingsRepository: ref.read(settingsRepositoryProvider),
@@ -184,8 +235,8 @@ class RecordingNotifier extends Notifier<RecordingState> {
           replacingOldAudioPath != wavPath) {
         try {
           await File(replacingOldAudioPath).delete();
-        } catch (_) {
-          // Ignore cleanup failures; the file is now orphaned and can be cleaned later.
+        } catch (e) {
+          foundation.debugPrint('Failed to delete replaced audio file: $e');
         }
       }
 
@@ -202,7 +253,7 @@ class RecordingNotifier extends Notifier<RecordingState> {
         ),
       );
     } catch (e) {
-      print('Recording workflow failed: $e');
+      foundation.debugPrint('Recording workflow failed: $e');
       state = RecordingState.failed;
 
       // Reset to idle after showing error
@@ -216,147 +267,19 @@ class RecordingNotifier extends Notifier<RecordingState> {
     String? todoId,
     String wavPath,
   ) async {
-    final recognition = ref.read(recognitionServiceProvider);
-    final repository = ref.read(todoRepositoryProvider);
-    final settings = ref.read(settingsProvider);
+    final useCase = ref.read(createTodoUseCaseProvider);
 
     try {
       // Ensure model is ready. If not, attempt reload once.
+      final recognition = ref.read(recognitionServiceProvider);
       final ready = await recognition.isModelReady();
       if (!ready) {
         await recognition.reloadModel();
       }
 
-      // Try recognition with a few retries and exponential backoff using
-      // the detailed recognizer which may return ASR-provided confidence.
-      Map<String, dynamic>? detailed;
-      const maxAttempts = 3;
-      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          final result = await recognition
-              .recognizeDetailed(wavPath)
-              .timeout(const Duration(seconds: 30), onTimeout: () {
-            throw TimeoutException('Recognition timed out');
-          });
-
-          if (result != null && (result['text'] ?? '').toString().isNotEmpty) {
-            detailed = Map<String, dynamic>.from(result);
-            break;
-          } else {
-            throw Exception('Empty recognition result');
-          }
-        } catch (e) {
-          if (attempt < maxAttempts) {
-            await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
-            continue;
-          } else {
-            rethrow;
-          }
-        }
-      }
-
-      if (detailed == null || (detailed['text'] ?? '').toString().isEmpty) {
-        throw Exception('error.speechRecognitionFailed');
-      }
-
-      // Normalize whitespace first and operate on a non-null local copy
-      var processed =
-          detailed['text'].toString().replaceAll(RegExp(r'\s+'), ' ').trim();
-
-      // Remove spaces between Chinese characters (keep spaces for Latin)
-      final cjkPair = RegExp(r'([\u4E00-\u9FFF])\s+([\u4E00-\u9FFF])');
-      while (cjkPair.hasMatch(processed)) {
-        processed =
-            processed.replaceAllMapped(cjkPair, (m) => '${m[1]}${m[2]}');
-      }
-
-      // Basic sentence end heuristic: ensure punctuation at end of text
-      final endsPunct = RegExp(r'[.!?。？，、]$');
-      if (!endsPunct.hasMatch(processed)) {
-        // If contains CJK characters use Chinese period
-        if (RegExp(r'[\u4E00-\u9FFF]').hasMatch(processed)) {
-          processed = '$processed。';
-        } else {
-          processed = '$processed.';
-        }
-      }
-
-      if (settings.autoRemoveTrailingPeriod) {
-        processed = processed.replaceFirst(RegExp(r'[。.]$'), '');
-      }
-
-      // Compute a heuristic confidence score based on text and simple audio cues
-      double computeTextHeuristic(String t) {
-        final len = t.length;
-        if (len < 4) return 0.3;
-        final base = ((len.clamp(4, 200) - 4) / 196).clamp(0.0, 1.0);
-        var conf = 0.5 + base * 0.45; // 0.5..0.95
-        final cjkCount = RegExp(r'[\u4E00-\u9FFF]').allMatches(t).length;
-        if (cjkCount / len > 0.5) conf = (conf + 0.05).clamp(0.0, 1.0);
-        return conf;
-      }
-
-      Future<double> computeAudioQuality(String path) async {
-        try {
-          final file = File(path);
-          if (!await file.exists()) return 0.5;
-          final bytes = await file.readAsBytes();
-          if (bytes.length <= 44) return 0.5;
-          final pcm = bytes.sublist(44);
-          final sampleCount = pcm.length ~/ 2;
-          if (sampleCount == 0) return 0.5;
-
-          int silent = 0;
-          const int threshold = 500; // low amplitude threshold
-          for (var i = 0; i < pcm.length; i += 2) {
-            final lo = pcm[i];
-            final hi = pcm[i + 1];
-            int sample = (hi << 8) | (lo & 0xFF);
-            if (sample & 0x8000 != 0) sample = sample - 0x10000;
-            if (sample.abs() < threshold) silent++;
-          }
-
-          final silenceRatio = silent / sampleCount;
-          final durationMs = (pcm.length / (16000 * 2) * 1000).toDouble();
-          final durationFactor =
-              (durationMs / 30000).clamp(0.0, 1.0); // favour up to 30s
-          final quality = (1.0 - silenceRatio) * 0.7 + durationFactor * 0.3;
-          return quality.clamp(0.0, 1.0);
-        } catch (_) {
-          return 0.5;
-        }
-      }
-
-      final textHeuristic = computeTextHeuristic(processed);
-      final audioQuality = await computeAudioQuality(wavPath);
-
-      // Combine ASR confidence (if present) with heuristics
-      final asrConfRaw = detailed['confidence'];
-      double finalConfidence;
-      if (asrConfRaw is num) {
-        final asrConf = asrConfRaw.toDouble().clamp(0.0, 1.0);
-        finalConfidence =
-            (asrConf * 0.7) + (textHeuristic * 0.2) + (audioQuality * 0.1);
-      } else {
-        finalConfidence = (textHeuristic * 0.6) + (audioQuality * 0.4);
-      }
-      finalConfidence = finalConfidence.clamp(0.0, 1.0);
-
-      if (todoId != null) {
-        await repository.completeRecognition(
-          id: todoId,
-          text: processed,
-          modelVersion: 'vosk-model-small-cn-0.22',
-          confidence: finalConfidence,
-        );
-      }
+      await useCase.execute(wavPath: wavPath, todoId: todoId);
     } catch (e) {
-      if (todoId != null) {
-        await repository.markFailed(
-          id: todoId,
-          errorMessage: e.toString(),
-        );
-      }
+      foundation.debugPrint('Background recognition failed: $e');
     } finally {
       await ref.read(todoListProvider.notifier).loadTodos();
     }
@@ -378,22 +301,6 @@ class RecordingNotifier extends Notifier<RecordingState> {
 final recordingStateProvider =
     NotifierProvider<RecordingNotifier, RecordingState>(() {
   return RecordingNotifier();
-});
-
-/// Notifier for current partial transcript
-class PartialTranscriptNotifier extends Notifier<String> {
-  @override
-  String build() => '';
-
-  void update(String newText) {
-    state = newText;
-  }
-}
-
-/// State for current partial transcript
-final partialTranscriptProvider =
-    NotifierProvider<PartialTranscriptNotifier, String>(() {
-  return PartialTranscriptNotifier();
 });
 
 /// State for all todo items
@@ -489,7 +396,22 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Load all todos from database
   Future<void> loadTodos() async {
-    state = AsyncValue.data(await _repository.getTodos(_queryOptions));
+    final todos = await _repository.getTodos(
+      _queryOptions,
+      sortInDatabase: false,
+    );
+    final sortedTodos = todos.length > 1
+        ? await ref.read(todoGroupingServiceProvider).sortTodosInBackground(
+              todos,
+              _queryOptions.sortField,
+              _queryOptions.direction,
+            )
+        : todos;
+    state = AsyncValue.data(sortedTodos);
+    // Refresh batch tags cache for list view
+    unawaited(ref.read(todoTagsCacheNotifierProvider.notifier).refreshForTodos(
+          sortedTodos.map((t) => t.id).toList(),
+        ));
   }
 
   /// Set query options and refresh list
@@ -578,13 +500,8 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Update todo text
   Future<void> updateText(String id, String newText) async {
-    final dbHelper = DatabaseHelper.instance;
-    final todo = await dbHelper.getTodoById(id);
-    if (todo != null) {
-      final updated = todo.copyWith(text: newText);
-      await dbHelper.updateTodo(updated);
-      await loadTodos();
-    }
+    await ref.read(todoRepositoryProvider).updateText(id, newText);
+    await loadTodos();
   }
 
   /// Update reminder time and refresh list state
@@ -619,7 +536,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
     } catch (e) {
       // Do not fail the UI update if scheduling fails; log for debugging
       // ignore: avoid_print
-      print('Failed to schedule reminder for todo $id: $e');
+      foundation.debugPrint('Failed to schedule reminder for todo $id: $e');
     }
     return refreshed;
   }
@@ -634,6 +551,7 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
   Future<void> setTags(String todoId, List<String> tagIds) async {
     await _repository.setTags(todoId, tagIds);
     ref.invalidate(tagsForTodoProvider(todoId));
+    ref.read(todoTagsCacheNotifierProvider.notifier).invalidateFor(todoId);
   }
 
   /// Update due time and refresh list state
@@ -757,16 +675,22 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
 
   /// Delete a todo
   Future<void> deleteTodo(String id) async {
+    await ref.read(reminderServiceProvider).clearReminder(id);
     await _repository.deleteTodo(id);
+    // Refresh trash list so deleted item appears immediately in Trash UI
+    await ref.read(trashTodosProvider.notifier).loadTrash();
     await loadTodos();
   }
 
   /// Delete multiple todos
   Future<void> deleteTodos(List<String> ids) async {
     for (final id in ids) {
+      await ref.read(reminderServiceProvider).clearReminder(id);
       await _repository.deleteTodo(id);
     }
     _selectedIds.clear();
+    // Ensure trash list is up-to-date after batch delete
+    await ref.read(trashTodosProvider.notifier).loadTrash();
     await loadTodos();
   }
 
@@ -791,8 +715,11 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
         .toList();
 
     for (final id in completedIds) {
+      await ref.read(reminderServiceProvider).clearReminder(id);
       await _repository.deleteTodo(id);
     }
+    // Refresh trash after removing completed items
+    await ref.read(trashTodosProvider.notifier).loadTrash();
     await loadTodos();
   }
 
@@ -913,12 +840,86 @@ final todoListProvider =
   return TodoListNotifier();
 });
 
+/// State for todos currently in the trash.
+class TrashTodosNotifier extends AsyncNotifier<List<TodoItem>> {
+  late final TodoRepository _repository;
+
+  @override
+  Future<List<TodoItem>> build() async {
+    _repository = ref.read(todoRepositoryProvider);
+    return _repository.getDeletedTodos();
+  }
+
+  Future<void> loadTrash() async {
+    state = const AsyncValue.loading();
+    try {
+      state = AsyncValue.data(await _repository.getDeletedTodos());
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  Future<void> restoreTodo(String id) async {
+    final restored = await _repository.restoreTodo(id);
+    if (restored != null) {
+      await ref.read(reminderServiceProvider).scheduleReminderForTodo(restored);
+    }
+    await loadTrash();
+    await ref.read(todoListProvider.notifier).loadTodos();
+  }
+
+  Future<void> purgeTodo(String id) async {
+    await ref.read(reminderServiceProvider).clearReminder(id);
+    await _repository.purgeTodoPermanently(id);
+    await loadTrash();
+    await ref.read(todoListProvider.notifier).loadTodos();
+  }
+
+  Future<void> purgeAllTrash() async {
+    final items = state.value ?? await _repository.getDeletedTodos();
+    for (final item in items) {
+      await ref.read(reminderServiceProvider).clearReminder(item.id);
+      await _repository.purgeTodoPermanently(item.id);
+    }
+    await loadTrash();
+    await ref.read(todoListProvider.notifier).loadTodos();
+  }
+
+  Future<void> purgeExpiredTrash(TrashAutoPurgeInterval interval) async {
+    await _repository.purgeExpiredDeletedTodos(interval);
+    await loadTrash();
+    await ref.read(todoListProvider.notifier).loadTodos();
+  }
+}
+
+final trashTodosProvider =
+    AsyncNotifierProvider<TrashTodosNotifier, List<TodoItem>>(() {
+  return TrashTodosNotifier();
+});
+
 /// Global provider holding persisted group order map so UI can react to changes.
 class GroupOrderMapNotifier extends Notifier<Map<String, int>> {
-  @override
-  Map<String, int> build() => {};
+  late final TodoGroupingService _groupingService;
 
-  void setMap(Map<String, int> map) => state = map;
+  @override
+  Map<String, int> build() {
+    _groupingService = ref.read(todoGroupingServiceProvider);
+    unawaited(_loadPersistedMap());
+    return {};
+  }
+
+  Future<void> _loadPersistedMap() async {
+    final orderMap = await _groupingService.loadGroupOrderMap();
+    state = orderMap;
+  }
+
+  void setMap(Map<String, int> map) {
+    state = map;
+  }
+
+  Future<void> saveMap(Map<String, int> map) async {
+    await _groupingService.saveGroupOrderMap(map);
+  }
 }
 
 final groupOrderMapProvider =

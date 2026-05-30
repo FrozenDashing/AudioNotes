@@ -8,6 +8,15 @@ enum ThemeModeOption { system, light, dark, custom }
 /// Enum for font sizes
 enum FontSizeOption { small, medium, large, custom }
 
+/// Retention period for items kept in the trash.
+enum TrashAutoPurgeInterval {
+  oneDay,
+  threeDays,
+  sevenDays,
+  thirtyDays,
+  never,
+}
+
 /// Model representing app settings state
 class SettingsState {
   /// Current model ID
@@ -46,6 +55,9 @@ class SettingsState {
   /// Whether to auto-remove trailing sentence-ending period from recognition text
   final bool autoRemoveTrailingPeriod;
 
+  /// How long deleted todos should stay in trash before auto-purging.
+  final TrashAutoPurgeInterval trashAutoPurgeInterval;
+
   /// Selected app language code (e.g. zh_CN, en)
   final String languageCode;
 
@@ -62,6 +74,7 @@ class SettingsState {
     this.defaultTodoPriority = TodoPriority.normal,
     this.aggregateCompletedTodos = false,
     this.autoRemoveTrailingPeriod = false,
+    this.trashAutoPurgeInterval = TrashAutoPurgeInterval.sevenDays,
     this.languageCode = 'zh_CN',
   });
 
@@ -80,6 +93,7 @@ class SettingsState {
       defaultTodoPriority: TodoPriority.normal,
       aggregateCompletedTodos: false,
       autoRemoveTrailingPeriod: false,
+      trashAutoPurgeInterval: TrashAutoPurgeInterval.sevenDays,
       languageCode: 'zh_CN',
     );
   }
@@ -98,6 +112,7 @@ class SettingsState {
     TodoPriority? defaultTodoPriority,
     bool? aggregateCompletedTodos,
     bool? autoRemoveTrailingPeriod,
+    TrashAutoPurgeInterval? trashAutoPurgeInterval,
     String? languageCode,
   }) {
     return SettingsState(
@@ -115,6 +130,8 @@ class SettingsState {
           aggregateCompletedTodos ?? this.aggregateCompletedTodos,
       autoRemoveTrailingPeriod:
           autoRemoveTrailingPeriod ?? this.autoRemoveTrailingPeriod,
+      trashAutoPurgeInterval:
+          trashAutoPurgeInterval ?? this.trashAutoPurgeInterval,
       languageCode: languageCode ?? this.languageCode,
     );
   }

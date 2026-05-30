@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -24,7 +25,9 @@ class NotificationService {
     try {
       final timezoneInfo = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
-    } catch (_) {
+    } catch (e) {
+      foundation.debugPrint(
+          'Failed to determine local timezone, defaulting to UTC: $e');
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
 
