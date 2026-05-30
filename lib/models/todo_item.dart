@@ -75,7 +75,6 @@ class TodoItem {
   final String? modelVersion; // Vosk model version used
   final int? orderIndex;
   final String? meta;
-  final String? calendarEventId; // Calendar event ID for system calendar integration
 
   const TodoItem({
     required this.id,
