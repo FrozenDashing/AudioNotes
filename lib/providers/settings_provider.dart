@@ -169,6 +169,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
     state = state.copyWith(notificationMode: mode);
     await ref.read(reminderServiceProvider).setNotificationMode(mode);
   }
+
+  /// Enable or disable quick text todo creation
+  Future<void> setEnableQuickTextTodo(bool enabled) async {
+    state = state.copyWith(enableQuickTextTodo: enabled);
+    await _saveSettings();
+  }
 }
 
 /// Provider for accessing settings

@@ -59,6 +59,7 @@ coverage/
 # Generated files (keep .g.dart in version control if needed)
 # *.g.dart
 # *.freezed.dart
+AGENTS.md
 
 # Vosk models (too large for git)
 assets/models/*.zip

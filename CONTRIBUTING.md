@@ -358,6 +358,9 @@ Contributors are recognized in:
 - [Riverpod Documentation](https://riverpod.dev/)
 - [Vosk Documentation](https://alphacephei.com/vosk/)
 - [Effective Dart](https://dart.dev/guides/language/effective-dart)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Flutter Testing Guide](https://docs.flutter.dev/testing)
+- [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
 
 ## Questions?
 

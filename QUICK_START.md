@@ -8,6 +8,7 @@ This guide will help you quickly set up and run the AudioNotes project on your l
 - Dart SDK >= 3.0.0
 - Android Studio (for Android development) or Xcode (for iOS development)
 - Git
+- Vosk ASR models (download separately from https://alphacephei.com/vosk/models)
 
 ## Setup Instructions
 

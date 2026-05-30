@@ -514,7 +514,7 @@ class _TodoListContent extends ConsumerWidget {
     final isManualSortEnabled = settings.todoSortField == TodoSortField.manual;
 
     if (groupKeys.isEmpty) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(context, ref);
     }
 
     return ReorderableListView.builder(
@@ -613,32 +613,48 @@ class _TodoListContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.mic_none,
-            size: 80,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            context.tr('home.empty.title'),
-            style: TextStyle(
-              fontSize: 20,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.tr('home.empty.subtitle'),
-            style: TextStyle(
-              fontSize: 14,
+          Builder(builder: (ctx) {
+            final settings = ref.watch(settingsProvider);
+            final isQuick = settings.enableQuickTextTodo;
+            return Icon(
+              isQuick ? Icons.sticky_note_2 : Icons.mic_none,
+              size: 80,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+            );
+          }),
+          const SizedBox(height: 16),
+          Builder(builder: (ctx) {
+            final settings = ref.watch(settingsProvider);
+            final isQuick = settings.enableQuickTextTodo;
+            return Text(
+              isQuick
+                  ? ctx.tr('home.empty.quickTitle')
+                  : ctx.tr('home.empty.title'),
+              style: TextStyle(
+                fontSize: 20,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+          Builder(builder: (ctx) {
+            final settings = ref.watch(settingsProvider);
+            final isQuick = settings.enableQuickTextTodo;
+            return Text(
+              isQuick
+                  ? ctx.tr('home.empty.quickSubtitle')
+                  : ctx.tr('home.empty.subtitle'),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -718,20 +734,27 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
   @override
   Widget build(BuildContext context) {
     final recordingState = ref.watch(recordingStateProvider);
+    final settings = ref.watch(settingsProvider);
 
     final fab = FloatingActionButton.extended(
-      onPressed: _getOnPressed(recordingState, ref, context),
+      onPressed: settings.enableQuickTextTodo
+          ? () => _openQuickTextDialog(context)
+          : _getOnPressed(recordingState, ref, context),
       label: Text(
-        recordingState == RecordingState.idle
-            ? (widget.isModelReady
-                ? context.tr('home.record.start')
-                : context.tr('home.model.downloadFirst'))
-            : recordingState == RecordingState.recording
-                ? context.tr('home.record.stop')
-                : context.tr('home.record.processing'),
+        settings.enableQuickTextTodo
+            ? context.tr('home.quickTodo')
+            : (recordingState == RecordingState.idle
+                ? (widget.isModelReady
+                    ? context.tr('home.record.start')
+                    : context.tr('home.model.downloadFirst'))
+                : recordingState == RecordingState.recording
+                    ? context.tr('home.record.stop')
+                    : context.tr('home.record.processing')),
       ),
       icon: Icon(
-        recordingState == RecordingState.idle ? Icons.mic : Icons.stop,
+        settings.enableQuickTextTodo
+            ? Icons.edit_outlined
+            : (recordingState == RecordingState.idle ? Icons.mic : Icons.stop),
       ),
       backgroundColor:
           !widget.isModelReady && recordingState == RecordingState.idle
@@ -746,6 +769,13 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
+      onTap: settings.enableQuickTextTodo
+          ? () => _openQuickTextDialog(context)
+          : null,
+      onLongPress: settings.enableQuickTextTodo
+          ? () => _startRecording(
+              ref.read(recordingStateProvider.notifier), context)
+          : null,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
@@ -757,6 +787,109 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
         child: fab,
       ),
     );
+  }
+
+  Future<void> _openQuickTextDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final successMsg = context.tr('home.quickTodoCreated');
+    final failMsgPrefix = context.tr('home.quickTodoCreateFailed');
+
+    final text = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ctx.tr('home.quickTodoTitle'),
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: controller,
+                  autofocus: true,
+                  minLines: 1,
+                  maxLines: 5,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    hintText: ctx.tr('home.quickTodoHint'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return ctx.tr('home.quickTodoValidate');
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) {
+                    if (formKey.currentState?.validate() ?? false) {
+                      Navigator.of(ctx).pop(controller.text);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(ctx.tr('common.cancel')),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (formKey.currentState?.validate() ?? false) {
+                          Navigator.of(ctx).pop(controller.text);
+                        }
+                      },
+                      child: Text(ctx.tr('home.quickTodoCreate')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (text == null) return;
+
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+
+    await _createQuickTextTodo(trimmed, successMsg, failMsgPrefix);
+  }
+
+  Future<void> _createQuickTextTodo(
+      String text, String successMsg, String failMsgPrefix) async {
+    try {
+      final priority = ref.read(settingsProvider).defaultTodoPriority;
+      final repo = ref.read(todoRepositoryProvider);
+      await repo.insertTextTodo(text: text, priority: priority);
+      await ref.read(todoListProvider.notifier).loadTodos();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMsg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$failMsgPrefix: $e')),
+      );
+    }
   }
 
   VoidCallback? _getOnPressed(

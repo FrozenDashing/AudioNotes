@@ -89,6 +89,10 @@
         "asc": "Ascending",
         "desc": "Descending"
       }
+      ,
+      "quickTextTodo": "Quick text todo",
+      "quickTextTodoTitle": "Enable quick text todos",
+      "quickTextTodoSubtitle": "When enabled, tapping the FAB opens a quick text input; long-press still records audio."
     },
     "voice": {
       "model": "Voice Model",
@@ -214,7 +218,9 @@
     },
     "empty": {
       "title": "No notes",
-      "subtitle": "Tap the mic to start recording"
+      "subtitle": "Tap the mic to start recording",
+      "quickTitle": "Tap the pencil to add a todo",
+      "quickSubtitle": "Tap to type a quick todo; long-press to record audio"
     },
     "record": {
       "start": "Record",
@@ -238,6 +244,14 @@
       "largeModelHint": "• Large model: ~1.8 GB (higher accuracy)",
       "downloadSmallModel": "Download small model"
     }
+    ,
+    "quickTodo": "Quick Todo",
+    "quickTodoTitle": "Quick Todo",
+    "quickTodoHint": "Enter todo content…",
+    "quickTodoValidate": "Please enter content",
+    "quickTodoCreate": "Create",
+    "quickTodoCreated": "Quick todo created",
+    "quickTodoCreateFailed": "Failed to create quick todo"
   },
   "toolbar": {
     "clearCompletedTooltip": "Clear all completed todos",

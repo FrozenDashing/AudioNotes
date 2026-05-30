@@ -23,6 +23,7 @@ class SettingsRepository {
   static const String _trashAutoPurgeIntervalKey = 'trash_auto_purge_interval';
   static const String _languageCodeKey = 'language_code';
   static const String _notificationModeKey = 'notification_mode';
+  static const String _enableQuickTextTodoKey = 'enable_quick_text_todo';
 
   /// Load settings from shared preferences
   Future<SettingsState> loadSettings() async {
@@ -79,6 +80,7 @@ class SettingsRepository {
       languageCode: prefs.getString(_languageCodeKey) ?? 'zh_CN',
       notificationMode: NotificationModeExtension.fromString(
           prefs.getString(_notificationModeKey) ?? 'none'),
+      enableQuickTextTodo: prefs.getBool(_enableQuickTextTodoKey) ?? false,
     );
   }
 
@@ -128,6 +130,10 @@ class SettingsRepository {
 
     result = result &&
         await prefs.setString(_languageCodeKey, settings.languageCode);
+
+    result = result &&
+        await prefs.setBool(
+            _enableQuickTextTodoKey, settings.enableQuickTextTodo);
 
     return result;
   }

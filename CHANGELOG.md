@@ -5,6 +5,68 @@ All notable changes to AudioNotes will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.8] - 2026-05-31
+
+### Added
+- **Desktop Widget Support**: Home screen widgets for quick access to recent todos and recording functionality
+- **System Calendar Integration**: Full synchronization with system calendar events using device_calendar_plus
+- **Optional Text Input**: Alternative text input mode alongside speech recognition for manual todo creation
+- **Widget Configuration**: Customizable widget settings for size, display options, and refresh intervals
+- **Calendar Event Sync**: Two-way synchronization between todos and calendar events with conflict resolution
+- **Text Input Dialog**: Manual todo creation with rich text formatting and priority selection
+- **Widget State Management**: Real-time widget updates for todo changes and recording status
+- **Calendar Permission Handling**: Comprehensive calendar access permission management
+- **Widget Templates**: Pre-configured widget templates for different use cases
+- **Manual Entry Mode**: Switch between speech and text input modes in settings
+
+### Changed
+- Updated version to 3.2.8 in pubspec.yaml
+- Enhanced home screen with mode selection (speech/text)
+- Improved settings interface with input method options
+- Updated todo creation workflow to support both input methods
+- Enhanced calendar sync with better error handling and retry logic
+- Optimized widget performance with background updates
+- Improved UI responsiveness for widget interactions
+- Enhanced data model to support manual entry metadata
+
+### Fixed
+- Widget update timing issues
+- Calendar sync conflicts and duplicates
+- Text input validation and sanitization
+- Widget background processing on different platforms
+- Calendar permission request flow
+- Widget lifecycle management
+
+## [3.2.7] - 2026-05-31
+
+### Added
+- Chinese language support (Simplified Chinese localization)
+- README_ZH.md comprehensive documentation
+- Cross-referencing between English and Chinese documentation
+- Enhanced calendar sync service with device_calendar_plus integration
+- Widget sync service for better UI state management
+- Awesome notifications service for improved user experience
+- Secure storage integration for sensitive data
+- WebDAV client support for cloud synchronization
+- Comprehensive audio file cleanup utilities
+- Advanced settings management with enhanced UI
+
+### Changed
+- Updated version to 3.2.7+1 in pubspec.yaml
+- Improved documentation structure with bilingual support
+- Enhanced audio playback service with better error handling
+- Optimized todo grouping service for large datasets
+- Updated dependencies to latest stable versions
+- Improved UI responsiveness during batch operations
+- Enhanced notification system with multiple notification types
+
+### Fixed
+- Audio file memory management issues
+- Notification delivery reliability improvements
+- UI state synchronization problems
+- Database query optimization for large todo lists
+- Cross-platform compatibility issues
+
 ## [Unreleased]
 
 ### Added

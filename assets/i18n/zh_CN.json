@@ -89,6 +89,10 @@
         "asc": "升序",
         "desc": "降序"
       }
+      ,
+      "quickTextTodo": "快速文本待办",
+      "quickTextTodoTitle": "允许快速文本输入待办",
+      "quickTextTodoSubtitle": "开启后，点击 FAB 可快速添加纯文本待办；长按仍进行录音。"
     },
     "voice": {
       "model": "语音模型",
@@ -214,7 +218,9 @@
     },
     "empty": {
       "title": "暂无笔记",
-      "subtitle": "点击麦克风开始录音"
+      "subtitle": "点击麦克风开始录音",
+      "quickTitle": "点击铅笔进行记录",
+      "quickSubtitle": "点击输入快速待办，长按开始录音"
     },
     "record": {
       "start": "录音",
@@ -238,6 +244,14 @@
       "largeModelHint": "• 大型模型: ~1.8 GB (更高准确率)",
       "downloadSmallModel": "下载小型模型"
     }
+    ,
+    "quickTodo": "快速待办",
+    "quickTodoTitle": "快速待办",
+    "quickTodoHint": "输入待办内容…",
+    "quickTodoValidate": "请输入内容",
+    "quickTodoCreate": "创建",
+    "quickTodoCreated": "已创建快速待办",
+    "quickTodoCreateFailed": "创建快速待办失败"
   },
   "toolbar": {
     "clearCompletedTooltip": "清除所有已完成待办",

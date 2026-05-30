@@ -32,10 +32,15 @@ AudioNotes/
 │   │   ├── recorder_service.dart          # Audio recording service
 │   │   ├── recognition_service.dart       # Speech recognition service
 │   │   ├── notification_service.dart      # Local notification service
+│   │   ├── awesome_notification_service.dart # Enhanced notification service
 │   │   ├── reminder_service.dart          # Reminder scheduling service
 │   │   ├── model_manager_service.dart     # Vosk model management
 │   │   ├── settings_service.dart          # Settings management
-│   │   └── audio_playback_service.dart    # Audio playback service
+│   │   ├── audio_playback_service.dart    # Audio playback service
+│   │   ├── calendar_sync_service.dart     # Calendar integration service
+│   │   ├── widget_sync_service.dart       # Widget synchronization service
+│   │   ├── text_input_service.dart        # Text input processing service
+│   │   └── widget_service.dart           # Widget management service
 │   │
 │   ├── ⚡ State Management (lib/providers/)
 │   │   └── app_providers.dart             # Riverpod providers & notifiers
@@ -73,6 +78,7 @@ AudioNotes/
 │
 ├── 📝 Documentation
 │   ├── README.md                          # Main documentation & overview
+│   ├── README_ZH.md                       # Chinese version documentation
 │   ├── ARCHITECTURE.md                    # Architecture overview
 │   ├── SETUP.md                           # Detailed setup instructions
 │   ├── CONTRIBUTING.md                    # Contribution guidelines

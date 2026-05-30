@@ -65,6 +65,9 @@ class SettingsState {
   /// Notification mode for reminders
   final NotificationMode notificationMode;
 
+  /// Whether quick text todo creation is enabled
+  final bool enableQuickTextTodo;
+
   SettingsState({
     required this.currentModelId,
     required this.autoModelSelect,
@@ -81,6 +84,7 @@ class SettingsState {
     this.trashAutoPurgeInterval = TrashAutoPurgeInterval.sevenDays,
     this.languageCode = 'zh_CN',
     this.notificationMode = NotificationMode.none,
+    this.enableQuickTextTodo = false,
   });
 
   /// Default settings
@@ -101,6 +105,7 @@ class SettingsState {
       trashAutoPurgeInterval: TrashAutoPurgeInterval.sevenDays,
       languageCode: 'zh_CN',
       notificationMode: NotificationMode.none,
+      enableQuickTextTodo: false,
     );
   }
 
@@ -121,6 +126,7 @@ class SettingsState {
     TrashAutoPurgeInterval? trashAutoPurgeInterval,
     String? languageCode,
     NotificationMode? notificationMode,
+    bool? enableQuickTextTodo,
   }) {
     return SettingsState(
       currentModelId: currentModelId ?? this.currentModelId,
@@ -141,6 +147,7 @@ class SettingsState {
           trashAutoPurgeInterval ?? this.trashAutoPurgeInterval,
       languageCode: languageCode ?? this.languageCode,
       notificationMode: notificationMode ?? this.notificationMode,
+      enableQuickTextTodo: enableQuickTextTodo ?? this.enableQuickTextTodo,
     );
   }
 }
