@@ -7,8 +7,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        // Register RecorderPlugin and RecognitionPlugin
+        // Register plugins
         flutterEngine.plugins.add(RecorderPlugin())
         flutterEngine.plugins.add(RecognitionPlugin())
+        flutterEngine.plugins.add(StorageUtils(this))
     }
 }

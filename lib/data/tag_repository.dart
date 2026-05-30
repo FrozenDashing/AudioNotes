@@ -35,6 +35,10 @@ class TagRepository {
     return _dbHelper.getTagsForTodo(todoId);
   }
 
+  Future<Map<String, List<Tag>>> getTagsForTodos(List<String> todoIds) async {
+    return _dbHelper.getTagsForTodos(todoIds);
+  }
+
   Future<void> setTagsForTodo(String todoId, List<String> tagIds) async {
     await _dbHelper.setTagsForTodo(todoId, tagIds);
   }

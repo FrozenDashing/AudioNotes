@@ -4,12 +4,10 @@ import '../l10n/app_i18n.dart';
 /// Overlay widget shown during recording
 class RecordingOverlay extends StatefulWidget {
   final bool isProcessing;
-  final String partialText;
 
   const RecordingOverlay({
     super.key,
     required this.isProcessing,
-    required this.partialText,
   });
 
   @override
@@ -87,40 +85,19 @@ class _RecordingOverlayState extends State<RecordingOverlay>
                   ),
                 ),
 
-                const SizedBox(height: 16),
-
-                // Partial transcript display
-                Container(
-                  width: double.infinity,
-                  constraints: const BoxConstraints(
-                    minHeight: 60,
-                    maxHeight: 200,
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      widget.partialText.isEmpty
-                          ? context.tr('todo.overlay.listening')
-                          : widget.partialText,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: widget.partialText.isEmpty
-                            ? Colors.grey[600]
-                            : Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-
                 if (!widget.isProcessing) ...[
                   const SizedBox(height: 16),
                   Text(
                     context.tr('todo.overlay.hint'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    context.tr('todo.overlay.listening'),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],

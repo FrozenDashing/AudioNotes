@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 
@@ -24,7 +25,7 @@ class AudioPlaybackService {
       await _player.setSource(DeviceFileSource(audioPath));
       await _player.resume();
     } catch (e) {
-      print('Error playing audio: $e');
+      foundation.debugPrint('Error playing audio: $e');
       rethrow;
     }
   }

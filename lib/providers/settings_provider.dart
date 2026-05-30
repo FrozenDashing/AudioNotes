@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import '../repositories/settings_repository.dart';
 import '../models/settings_state.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../models/todo_query_options.dart';
+import '../models/notification_mode.dart';
 import 'app_providers.dart';
 
 /// Provider for accessing settings repository
@@ -38,7 +40,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       if (ref.mounted) {
         state = SettingsState.initial();
       }
-      debugPrint('Error loading settings: $e');
+      foundation.debugPrint('Error loading settings: $e');
     }
   }
 
@@ -46,7 +48,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     try {
       await _repository.saveSettings(state);
     } catch (e) {
-      debugPrint('Error saving settings: $e');
+      foundation.debugPrint('Error saving settings: $e');
     }
   }
 
@@ -149,10 +151,23 @@ class SettingsNotifier extends Notifier<SettingsState> {
     await _saveSettings();
   }
 
+  /// Set trash auto-purge retention interval.
+  Future<void> setTrashAutoPurgeInterval(
+      TrashAutoPurgeInterval interval) async {
+    state = state.copyWith(trashAutoPurgeInterval: interval);
+    await _saveSettings();
+  }
+
   /// Set app language code used by i18n
   Future<void> setLanguageCode(String languageCode) async {
     state = state.copyWith(languageCode: languageCode);
     await _saveSettings();
+  }
+
+  /// Set notification mode for reminders
+  Future<void> setNotificationMode(NotificationMode mode) async {
+    state = state.copyWith(notificationMode: mode);
+    await ref.read(reminderServiceProvider).setNotificationMode(mode);
   }
 }
 

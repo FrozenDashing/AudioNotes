@@ -5,7 +5,6 @@ class SpeechSegment {
   final int startTimestamp;
   final int endTimestamp;
   final String audioPath;
-  final double? confidence;
   final bool isFinal;
 
   const SpeechSegment({
@@ -14,7 +13,6 @@ class SpeechSegment {
     required this.startTimestamp,
     required this.endTimestamp,
     required this.audioPath,
-    this.confidence,
     this.isFinal = true,
   });
 
@@ -25,7 +23,6 @@ class SpeechSegment {
       startTimestamp: map['start_ts'] as int? ?? 0,
       endTimestamp: map['end_ts'] as int? ?? 0,
       audioPath: map['audio_path'] as String? ?? '',
-      confidence: map['confidence'] as double?,
       isFinal: map['is_final'] as bool? ?? true,
     );
   }
@@ -37,7 +34,6 @@ class SpeechSegment {
       'start_ts': startTimestamp,
       'end_ts': endTimestamp,
       'audio_path': audioPath,
-      'confidence': confidence,
       'is_final': isFinal,
     };
   }

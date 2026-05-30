@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:io';
 
 /// Utility for splitting long audio files into chunks for better recognition
@@ -22,7 +23,8 @@ class AudioChunker {
       return [wavPath];
     }
 
-    print('Audio is $durationMs ms long, splitting into chunks...');
+    foundation
+        .debugPrint('Audio is $durationMs ms long, splitting into chunks...');
 
     // Read the entire file
     final data = await file.readAsBytes();
@@ -62,7 +64,7 @@ class AudioChunker {
     }
 
     final chunkCount = chunks.length;
-    print('Split into $chunkCount chunks');
+    foundation.debugPrint('Split into $chunkCount chunks');
     return chunks;
   }
 

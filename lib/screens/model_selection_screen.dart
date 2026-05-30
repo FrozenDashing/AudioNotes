@@ -170,7 +170,10 @@ class _ModelSelectionScreenState extends ConsumerState<ModelSelectionScreen> {
                     // Attempt to clean up partial files
                     try {
                       await manager.deleteModel(model.modelId);
-                    } catch (_) {}
+                    } catch (e) {
+                      debugPrint(
+                          'Failed to clean up partial model download: $e');
+                    }
                     if (context.mounted) Navigator.pop(context);
                   },
                   child: Text(context.tr('common.cancel')),

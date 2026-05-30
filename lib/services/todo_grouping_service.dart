@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' as foundation;
 
 import '../models/category.dart';
 import '../models/todo_group.dart';
@@ -31,7 +31,8 @@ class TodoGroupingService {
       return decoded.map(
         (key, value) => MapEntry(key.toString(), value is int ? value : 0),
       );
-    } catch (_) {
+    } catch (e) {
+      foundation.debugPrint('Failed to load group order map: $e');
       return {};
     }
   }
@@ -51,7 +52,8 @@ class TodoGroupingService {
       if (decoded is! Map) return {};
       return decoded
           .map((key, value) => MapEntry(key.toString(), value == true));
-    } catch (_) {
+    } catch (e) {
+      foundation.debugPrint('Failed to load expanded map: $e');
       return {};
     }
   }
@@ -191,7 +193,7 @@ class TodoGroupingService {
       'direction': direction == SortDirection.asc ? 'asc' : 'desc',
     };
 
-    final result = await compute(_backgroundSortPayload, payload);
+    final result = await foundation.compute(_backgroundSortPayload, payload);
     return result
         .cast<Map<String, dynamic>>()
         .map((m) => TodoItem.fromJson(Map<String, dynamic>.from(m)))

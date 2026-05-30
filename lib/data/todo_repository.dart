@@ -1,13 +1,17 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' as foundation;
+import 'package:uuid/uuid.dart';
 import '../models/todo_item.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_query_options.dart';
 import 'database_helper.dart';
 import '../utils/audio_file_cleanup.dart';
+import '../models/settings_state.dart';
 
 /// Repository for managing todo items with proper lifecycle management
 class TodoRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final Uuid _uuid = const Uuid();
 
   /// Insert a new todo in recognizing state after recording ends
   Future<TodoItem> insertRecognizing({
@@ -18,7 +22,7 @@ class TodoRepository {
     final orderIndex = await _dbHelper.getNextOrderIndex();
 
     final todo = TodoItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: _uuid.v4(),
       text: text,
       rawTranscript: text,
       createdAt: DateTime.now(),
@@ -60,22 +64,35 @@ class TodoRepository {
   Future<void> completeRecognition({
     required String id,
     required String text,
-    int? durationMs,
     String? modelVersion,
-    double? confidence,
+    String? rawTranscript,
   }) async {
     final todo = await _dbHelper.getTodoById(id);
     if (todo != null) {
+      final originalAudioPath = todo.audioPath;
+
       final updated = todo.copyWith(
         text: text,
-        rawTranscript: text,
+        rawTranscript: rawTranscript ?? text,
         taskState: TodoTaskState.ready,
-        durationMs: durationMs,
         modelVersion: modelVersion,
-        confidence: confidence,
+        audioPath: null, // we no longer keep audio after saving rawTranscript
         updatedAt: DateTime.now(),
       );
+
       await _dbHelper.updateTodo(updated);
+
+      // Delete the original audio file from disk if present
+      if (originalAudioPath != null && originalAudioPath.isNotEmpty) {
+        try {
+          final file = File(originalAudioPath);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          foundation.debugPrint('Failed to delete audio after recognition: $e');
+        }
+      }
     }
   }
 
@@ -98,6 +115,24 @@ class TodoRepository {
   /// Toggle todo completion status
   Future<void> toggleStatus(String id) async {
     await _dbHelper.toggleStatus(id);
+  }
+
+  /// Update the text of a todo item
+  Future<void> updateText(String id, String newText) async {
+    final todo = await _dbHelper.getTodoById(id);
+    if (todo == null) return;
+
+    final trimmedText = newText.trim();
+    final updatedText = trimmedText.isEmpty &&
+            (todo.rawTranscript != null && todo.rawTranscript!.isNotEmpty)
+        ? todo.rawTranscript!
+        : trimmedText;
+
+    final updated = todo.copyWith(
+      text: updatedText,
+      updatedAt: DateTime.now(),
+    );
+    await _dbHelper.updateTodo(updated);
   }
 
   /// Update the due time of a todo item
@@ -157,27 +192,69 @@ class TodoRepository {
     final todo = await _dbHelper.getTodoById(id);
     if (todo == null) return;
 
-    // Delete audio file if exists
-    if (todo.audioPath != null && todo.audioPath!.isNotEmpty) {
+    await _dbHelper.deleteReminderByTodoId(id);
+    await _dbHelper.deleteTodo(id);
+  }
+
+  /// Restore a todo from the trash
+  Future<TodoItem?> restoreTodo(String id) async {
+    final todo = await _dbHelper.getTodoById(id, includeDeleted: true);
+    if (todo == null || todo.deletedAt == null) {
+      return null;
+    }
+
+    final rows = await _dbHelper.restoreTodo(id);
+    if (rows == 0) {
+      return null;
+    }
+
+    return _dbHelper.getTodoById(id, includeDeleted: true);
+  }
+
+  /// Permanently delete a todo and its stored audio file.
+  Future<void> purgeTodoPermanently(String id) async {
+    final todo = await _dbHelper.getTodoById(id, includeDeleted: true);
+    final audioPath = todo?.audioPath;
+
+    await _dbHelper.deleteReminderByTodoId(id);
+    await _dbHelper.purgeTodoPermanently(id);
+
+    if (audioPath != null && audioPath.isNotEmpty) {
       try {
-        final file = File(todo.audioPath!);
+        final file = File(audioPath);
         if (await file.exists()) {
           await file.delete();
         }
       } catch (e) {
-        print('Error deleting audio file: $e');
+        foundation.debugPrint('Error deleting audio file: $e');
       }
     }
+  }
 
-    await _dbHelper.deleteReminderByTodoId(id);
+  /// Purge todos that have been deleted longer than the configured interval.
+  Future<void> purgeExpiredDeletedTodos(TrashAutoPurgeInterval interval) async {
+    if (interval == TrashAutoPurgeInterval.never) {
+      return;
+    }
 
-    // Delete from database
-    await _dbHelper.deleteTodo(id);
+    final cutoff = DateTime.now().subtract(_durationForInterval(interval));
+    await _dbHelper.purgeDeletedTodosBefore(cutoff);
+  }
+
+  /// Permanently delete every todo currently in trash.
+  Future<void> purgeAllDeletedTodos() async {
+    await _dbHelper.purgeAllDeletedTodos();
   }
 
   /// Get todos using unified query options
-  Future<List<TodoItem>> getTodos(TodoQueryOptions options) async {
-    return await _dbHelper.getTodos(options);
+  Future<List<TodoItem>> getTodos(
+    TodoQueryOptions options, {
+    bool sortInDatabase = true,
+  }) async {
+    return await _dbHelper.getTodos(
+      options,
+      sortInDatabase: sortInDatabase,
+    );
   }
 
   /// Get all todos (legacy helper)
@@ -205,11 +282,21 @@ class TodoRepository {
     return _dbHelper.getTodoById(id);
   }
 
+  /// Update a todo item
+  Future<void> updateTodo(TodoItem todo) async {
+    await _dbHelper.updateTodo(todo);
+  }
+
+  /// Get todos currently in the trash.
+  Future<List<TodoItem>> getDeletedTodos() async {
+    return await _dbHelper.getDeletedTodos();
+  }
+
   /// Clean up orphaned audio files
   Future<void> cleanupOrphanedFiles() async {
     try {
       // Get all valid audio paths from database
-      final todos = await getAllTodos();
+      final todos = await _dbHelper.getAllTodos(includeDeleted: true);
       final validAudioPaths = todos
           .where((todo) => todo.audioPath != null && todo.audioPath!.isNotEmpty)
           .map((todo) => todo.audioPath!)
@@ -218,12 +305,27 @@ class TodoRepository {
       // Clean up orphaned files
       await AudioFileCleanup.cleanOrphanedFiles(validAudioPaths);
     } catch (e) {
-      print('Error during cleanup: $e');
+      foundation.debugPrint('Error during cleanup: $e');
     }
   }
 
   /// Get total storage used by audio files
   Future<int> getTotalAudioStorageSize() async {
     return await AudioFileCleanup.getTotalAudioSize();
+  }
+
+  Duration _durationForInterval(TrashAutoPurgeInterval interval) {
+    switch (interval) {
+      case TrashAutoPurgeInterval.oneDay:
+        return const Duration(days: 1);
+      case TrashAutoPurgeInterval.threeDays:
+        return const Duration(days: 3);
+      case TrashAutoPurgeInterval.sevenDays:
+        return const Duration(days: 7);
+      case TrashAutoPurgeInterval.thirtyDays:
+        return const Duration(days: 30);
+      case TrashAutoPurgeInterval.never:
+        return Duration.zero;
+    }
   }
 }

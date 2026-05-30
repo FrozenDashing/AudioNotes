@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -26,11 +27,11 @@ class RecognitionService {
         return result as String?;
       } else {
         // Multiple chunks, process each and merge
-        print('Processing ${chunks.length} chunks...');
+        foundation.debugPrint('Processing ${chunks.length} chunks...');
 
         final results = <String>[];
         for (int i = 0; i < chunks.length; i++) {
-          print('Processing chunk ${i + 1}/${chunks.length}');
+          foundation.debugPrint('Processing chunk ${i + 1}/${chunks.length}');
 
           final result = await _channel.invokeMethod('recognize', {
             'wav_path': chunks[i],
@@ -45,7 +46,7 @@ class RecognitionService {
         return _chunker.mergeResults(results);
       }
     } on PlatformException catch (e) {
-      print('Failed to recognize audio: ${e.message}');
+      foundation.debugPrint('Failed to recognize audio: ${e.message}');
       rethrow;
     } finally {
       // Clean up temporary chunk files even if recognition fails
@@ -54,80 +55,19 @@ class RecognitionService {
           try {
             await _deleteFile(chunk);
           } catch (e) {
-            print('Error deleting chunk file: $e');
+            foundation.debugPrint('Error deleting chunk file: $e');
           }
         }
       }
     }
   }
 
-  /// Recognize a WAV file and return detailed result including text and
-  /// optional confidence score from the platform ASR.
-  /// Returns a map: { 'text': String, 'confidence': double? }
+  /// Recognize a WAV file and return a detailed result including text.
+  /// Returns a map: { 'text': String }
   Future<Map<String, dynamic>?> recognizeDetailed(String wavPath) async {
-    List<String> chunks = [wavPath];
-
-    try {
-      chunks = await _chunker.splitIfNeeded(wavPath);
-
-      if (chunks.length == 1) {
-        final result = await _channel.invokeMethod('recognize', {
-          'wav_path': chunks.first,
-          'detailed': true,
-        });
-
-        if (result == null) return null;
-
-        if (result is Map) {
-          // Expect {'text': '...', 'confidence': 0.87}
-          return Map<String, dynamic>.from(result);
-        } else {
-          // Fallback: string
-          return {'text': result.toString(), 'confidence': null};
-        }
-      } else {
-        final texts = <String>[];
-        final confidences = <double>[];
-
-        for (final chunk in chunks) {
-          final result = await _channel.invokeMethod('recognize', {
-            'wav_path': chunk,
-            'detailed': true,
-          });
-
-          if (result == null) continue;
-          if (result is Map) {
-            final text = (result['text'] ?? '').toString();
-            texts.add(text);
-            final conf = result['confidence'];
-            if (conf is num) confidences.add(conf.toDouble());
-          } else {
-            final s = result.toString();
-            if (s.isNotEmpty) texts.add(s);
-          }
-        }
-
-        final merged = _chunker.mergeResults(texts);
-        double? avgConf;
-        if (confidences.isNotEmpty) {
-          avgConf = confidences.reduce((a, b) => a + b) / confidences.length;
-        }
-        return {'text': merged, 'confidence': avgConf};
-      }
-    } on PlatformException catch (e) {
-      print('Failed to recognize audio (detailed): ${e.message}');
-      rethrow;
-    } finally {
-      for (final chunk in chunks) {
-        if (chunk != wavPath) {
-          try {
-            await _deleteFile(chunk);
-          } catch (e) {
-            print('Error deleting chunk file: $e');
-          }
-        }
-      }
-    }
+    final text = await recognize(wavPath);
+    if (text == null) return null;
+    return {'text': text};
   }
 
   /// Check if model is loaded and ready
@@ -136,7 +76,7 @@ class RecognitionService {
       final result = await _channel.invokeMethod('isModelReady');
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to check model status: ${e.message}');
+      foundation.debugPrint('Failed to check model status: ${e.message}');
       return false;
     }
   }
@@ -147,7 +87,7 @@ class RecognitionService {
       final result = await _channel.invokeMethod('reloadModel');
       return result == true;
     } on PlatformException catch (e) {
-      print('Failed to reload model: ${e.message}');
+      foundation.debugPrint('Failed to reload model: ${e.message}');
       return false;
     }
   }

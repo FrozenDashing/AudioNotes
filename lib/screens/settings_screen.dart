@@ -3,14 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_i18n.dart';
 import '../models/settings_state.dart';
+import '../models/notification_mode.dart';
 import '../models/todo_priority.dart';
 import '../models/todo_sort.dart';
 import '../providers/settings_provider.dart';
+import '../sync/providers/sync_provider.dart';
+import '../sync/coordinator/sync_coordinator.dart';
 import '../utils/motion.dart';
 import 'settings/appearance_settings_screen.dart';
 import 'settings/general_settings_screen.dart';
 import 'settings/todo_settings_screen.dart';
 import 'settings/voice_settings_screen.dart';
+import 'sync/webdav_settings_screen.dart';
 
 /// Settings hub screen.
 ///
@@ -40,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
               accentColor: Theme.of(context).colorScheme.primary,
               title: context.tr('settings.section.general'),
               subtitle:
-                  '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)}',
+                  '${context.tr('settings.general.language')}：${_languageLabel(context, settings.languageCode)} · ${context.tr('settings.summary.notificationMode')}：${_notificationModeLabel(context, settings.notificationMode)}',
               onTap: () {
                 Navigator.push(
                   context,
@@ -113,6 +117,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
             duration: MotionTokens.page,
           ),
+          const SizedBox(height: 12),
+          motionEntrance(
+            context,
+            _SettingsHubCard(
+              icon: Icons.cloud_outlined,
+              accentColor: Theme.of(context).colorScheme.primary,
+              title: context.tr('settings.section.sync'),
+              subtitle: _syncSummary(context, ref),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const WebDavSettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: MotionTokens.page,
+          ),
           const SizedBox(height: 24),
           motionEntrance(
             context,
@@ -136,6 +159,17 @@ class SettingsScreen extends ConsumerWidget {
       return context.tr('settings.general.langEn');
     }
     return context.tr('settings.general.langZhCn');
+  }
+
+  String _notificationModeLabel(BuildContext context, NotificationMode mode) {
+    return switch (mode) {
+      NotificationMode.none => context.tr('settings.notification.none'),
+      NotificationMode.local =>
+        '${context.tr('settings.notification.local')}（默认）',
+      NotificationMode.calendar => context.tr('settings.notification.calendar'),
+      NotificationMode.awesome =>
+        '${context.tr('settings.notification.local')}（默认）',
+    };
   }
 
   String _themeModeLabel(BuildContext context, ThemeModeOption mode) {
@@ -188,7 +222,34 @@ class SettingsScreen extends ConsumerWidget {
       SortDirection.asc => context.tr('settings.todo.sort.asc'),
       SortDirection.desc => context.tr('settings.todo.sort.desc'),
     };
-    return '$field / $direction';
+    final trash = switch (settings.trashAutoPurgeInterval) {
+      TrashAutoPurgeInterval.oneDay =>
+        context.tr('settings.todo.trashRetentionOptions.oneDay'),
+      TrashAutoPurgeInterval.threeDays =>
+        context.tr('settings.todo.trashRetentionOptions.threeDays'),
+      TrashAutoPurgeInterval.sevenDays =>
+        context.tr('settings.todo.trashRetentionOptions.sevenDays'),
+      TrashAutoPurgeInterval.thirtyDays =>
+        context.tr('settings.todo.trashRetentionOptions.thirtyDays'),
+      TrashAutoPurgeInterval.never =>
+        context.tr('settings.todo.trashRetentionOptions.never'),
+    };
+    return '$field / $direction · $trash';
+  }
+
+  String _syncSummary(BuildContext context, WidgetRef ref) {
+    final syncState = ref.watch(syncProvider);
+    if (!syncState.isConfigured) {
+      return '${context.tr('settings.summary.syncStatus')}：${context.tr('common.disabled')}';
+    }
+    final statusStr = switch (syncState.status) {
+      SyncStatus.idle => context.tr('common.enabled'),
+      SyncStatus.syncing => context.tr('settings.sync.syncing'),
+      SyncStatus.success => context.tr('settings.sync.success'),
+      SyncStatus.error => context.tr('settings.sync.failed'),
+      SyncStatus.conflict => context.tr('settings.sync.conflict.manual'),
+    };
+    return '${context.tr('settings.summary.syncStatus')}：$statusStr';
   }
 }
 

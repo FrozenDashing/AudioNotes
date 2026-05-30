@@ -2,6 +2,10 @@
   "app": {
     "title": "AudioNotes"
   },
+  "notification": {
+    "todoReminder": "Todo reminder",
+    "dueAt": "Due: {date}"
+  },
   "common": {
     "enabled": "Enabled",
     "disabled": "Disabled",
@@ -22,7 +26,8 @@
       "general": "General",
       "appearance": "Appearance",
       "todo": "Todos",
-      "voice": "Voice"
+      "voice": "Voice",
+      "sync": "Sync"
     },
     "general": {
       "title": "General Settings",
@@ -30,6 +35,16 @@
       "languageSubtitle": "Switch application language",
       "langZhCn": "简体中文",
       "langEn": "English"
+    },
+    "notification": {
+      "title": "Reminder Mode",
+      "current": "Current reminder mode",
+      "none": "Disabled",
+      "local": "Local notifications",
+      "calendar": "Calendar sync",
+      "permissionHint": "Local reminders require notification permission",
+      "permissionGranted": "Notification permission is enabled",
+      "permissionDenied": "Notification permission is required for local reminders"
     },
     "appearance": {
       "themeColor": "Theme Color",
@@ -52,6 +67,14 @@
       "aggregateCompleted": "Completed Aggregation",
       "aggregateCompletedTitle": "Group completed todos",
       "aggregateCompletedSubtitle": "When enabled, all completed todos are grouped under Completed.",
+      "trashRetention": "Trash auto-purge interval",
+      "trashRetentionOptions": {
+        "oneDay": "1 day",
+        "threeDays": "3 days",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days",
+        "never": "Never"
+      },
       "priority": {
         "low": "Low",
         "normal": "Normal",
@@ -84,9 +107,55 @@
       "defaultPriority": "Default priority",
       "completedAggregation": "Completed aggregation",
       "sort": "Sort",
+      "trashRetention": "Trash retention",
+      "notificationMode": "Reminder mode",
       "model": "Model",
       "trailingPeriodRemoval": "Trailing period removal",
-      "autoSelect": "Auto"
+      "autoSelect": "Auto",
+      "syncStatus": "Sync"
+    },
+    "sync": {
+      "title": "Cloud Sync",
+      "connection": "WebDAV Connection",
+      "url": "Server URL",
+      "username": "Username",
+      "password": "Password",
+      "remoteDir": "Remote Directory",
+      "urlRequired": "URL is required",
+      "urlInvalid": "URL must start with http",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required",
+      "testConnection": "Test",
+      "saveConfig": "Save",
+      "connectionSuccess": "Connection successful",
+      "connectionFailed": "Connection failed",
+      "configSaved": "Configuration saved",
+      "configSaveFailed": "Failed to save configuration",
+      "syncActions": "Sync Actions",
+      "syncNow": "Sync Now",
+      "syncing": "Syncing...",
+      "syncComplete": "Sync complete",
+      "syncFailed": "Sync failed",
+      "success": "Success",
+      "failed": "Failed",
+      "lastSync": "Last sync",
+      "result": "Result",
+      "disconnect": "Disconnect",
+      "disconnectConfirm": "Disconnect WebDAV? Local data will be preserved.",
+      "syncSettings": "Sync Settings",
+      "autoSync": "Auto Sync",
+      "autoSyncSubtitle": "Periodically sync data with the cloud",
+      "syncOnStartup": "Sync on Startup",
+      "syncOnStartupSubtitle": "Automatically sync when app starts",
+      "interval": "Sync Interval",
+      "minutes": "min",
+      "conflictStrategy": "Conflict Strategy",
+      "conflict": {
+        "localWins": "Local wins",
+        "remoteWins": "Remote wins",
+        "latestModified": "Latest modified",
+        "manual": "Manual resolve"
+      }
     }
   },
   "themePicker": {
@@ -140,7 +209,8 @@
       "clearAll": "Clear selection"
     },
     "menu": {
-      "more": "More"
+      "more": "More",
+      "trash": "Trash"
     },
     "empty": {
       "title": "No notes",
@@ -246,5 +316,17 @@
       "listening": "Listening...",
       "hint": "Speak clearly into the microphone"
     }
+  },
+  "trash": {
+    "title": "Trash",
+    "emptyTitle": "Trash is empty",
+    "emptySubtitle": "Deleted todos stay here first so you can restore or auto-purge them.",
+    "deletedAt": "Deleted {time}",
+    "restore": "Restore",
+    "purge": "Delete permanently",
+    "clearAll": "Empty trash",
+    "clearAllTitle": "Empty trash?",
+    "clearAllContent": "This will permanently delete all trashed todos and cannot be undone.",
+    "clearAllAction": "Empty"
   }
 }

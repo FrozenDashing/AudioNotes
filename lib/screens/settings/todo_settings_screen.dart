@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_i18n.dart';
 import '../../models/todo_priority.dart';
+import '../../models/settings_state.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/motion.dart';
 
@@ -63,6 +64,30 @@ class TodoSettingsScreen extends ConsumerWidget {
               },
             ),
           ),
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: context.tr('settings.todo.trashRetention'),
+            child: RadioGroup<TrashAutoPurgeInterval>(
+              groupValue: settings.trashAutoPurgeInterval,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                ref
+                    .read(settingsProvider.notifier)
+                    .setTrashAutoPurgeInterval(value);
+              },
+              child: Column(
+                children: TrashAutoPurgeInterval.values.map((interval) {
+                  return RadioListTile<TrashAutoPurgeInterval>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_trashRetentionLabel(context, interval)),
+                    value: interval,
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -78,6 +103,24 @@ class TodoSettingsScreen extends ConsumerWidget {
         return context.tr('settings.todo.priority.high');
       case TodoPriority.urgent:
         return context.tr('settings.todo.priority.urgent');
+    }
+  }
+
+  String _trashRetentionLabel(
+    BuildContext context,
+    TrashAutoPurgeInterval interval,
+  ) {
+    switch (interval) {
+      case TrashAutoPurgeInterval.oneDay:
+        return context.tr('settings.todo.trashRetentionOptions.oneDay');
+      case TrashAutoPurgeInterval.threeDays:
+        return context.tr('settings.todo.trashRetentionOptions.threeDays');
+      case TrashAutoPurgeInterval.sevenDays:
+        return context.tr('settings.todo.trashRetentionOptions.sevenDays');
+      case TrashAutoPurgeInterval.thirtyDays:
+        return context.tr('settings.todo.trashRetentionOptions.thirtyDays');
+      case TrashAutoPurgeInterval.never:
+        return context.tr('settings.todo.trashRetentionOptions.never');
     }
   }
 }

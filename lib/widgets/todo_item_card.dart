@@ -91,17 +91,29 @@ class TodoItemCard extends ConsumerWidget {
     String? priorityLabel,
     EdgeInsets cardPadding,
   ) {
+    // Use batch tags cache when available to avoid N database queries
+    final cachedTags = ref.watch(todoTagsCacheNotifierProvider)[todo.id];
     final tagsAsync = ref.watch(tagsForTodoProvider(todo.id));
-    final tags = tagsAsync.maybeWhen(
+    final fallbackTags = tagsAsync.maybeWhen(
       data: (items) => items,
       orElse: () => const <Tag>[],
     );
+    final tags = (cachedTags ?? fallbackTags);
+
+    final displayText = todo.text.isNotEmpty
+        ? todo.text
+        : (todo.rawTranscript != null && todo.rawTranscript!.isNotEmpty
+            ? todo.rawTranscript!
+            : context.tr('todo.recognizingInline'));
 
     if (isRecognizing) {
-      return Card(
+      return Container(
         margin: EdgeInsets.zero,
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.5 : 0.8,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: theme.colorScheme.surface.withValues(
+            alpha: theme.brightness == Brightness.dark ? 0.5 : 0.8,
+          ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -188,9 +200,7 @@ class TodoItemCard extends ConsumerWidget {
                     children: [
                       if (isCompleted)
                         CompletedText(
-                          text: todo.text.isEmpty
-                              ? context.tr('todo.recognizingInline')
-                              : todo.text,
+                          text: displayText,
                           style: TextStyle(
                             fontSize: 20,
                             height: 1.1,
@@ -199,9 +209,7 @@ class TodoItemCard extends ConsumerWidget {
                         )
                       else
                         Text(
-                          todo.text.isEmpty
-                              ? context.tr('todo.recognizingInline')
-                              : todo.text,
+                          displayText,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -452,7 +460,6 @@ class TodoItemCard extends ConsumerWidget {
     TodoItem todo,
   ) {
     final isCompleted = todo.status == TodoStatus.completed;
-    final hasAudio = todo.audioPath != null && todo.audioPath!.isNotEmpty;
 
     showModalBottomSheet(
       context: context,
@@ -539,15 +546,7 @@ class TodoItemCard extends ConsumerWidget {
                       _reRecord(context, ref, todo);
                     },
                   ),
-                if (hasAudio)
-                  ListTile(
-                    leading: const Icon(Icons.play_arrow),
-                    title: Text(context.tr('todo.playbackAction')),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _playback(context, ref, todo);
-                    },
-                  ),
+                // Playback option removed: audio files are deleted after recognition
                 ListTile(
                   leading: const Icon(Icons.delete, color: Colors.red),
                   title: Text(context.tr('common.delete'),
@@ -744,7 +743,9 @@ class TodoItemCard extends ConsumerWidget {
 
   void _showEditDialog(
       BuildContext context, TodoListNotifier notifier, TodoItem todo) {
-    final controller = TextEditingController(text: todo.text);
+    final controller = TextEditingController(
+      text: todo.text.isNotEmpty ? todo.text : (todo.rawTranscript ?? ''),
+    );
 
     showDialog(
       context: context,
@@ -767,7 +768,6 @@ class TodoItemCard extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (controller.text.trim().isEmpty) return;
                 final navigator = Navigator.of(dialogContext);
                 await notifier.updateText(todo.id, controller.text.trim());
                 navigator.pop();
@@ -793,27 +793,7 @@ class TodoItemCard extends ConsumerWidget {
     });
   }
 
-  Future<void> _playback(
-      BuildContext context, WidgetRef ref, TodoItem todo) async {
-    final audioPath = todo.audioPath;
-    if (audioPath == null || audioPath.isEmpty) {
-      if (context.mounted) {
-        _showToast(context, context.tr('todo.noAudioToPlay'));
-      }
-      return;
-    }
-
-    try {
-      await ref.read(audioPlaybackServiceProvider).play(audioPath);
-    } catch (e) {
-      if (context.mounted) {
-        _showToast(
-          context,
-          context.tr('todo.playbackFailed', params: {'error': '$e'}),
-        );
-      }
-    }
-  }
+  // Playback removed: audio files are deleted after recognition and playback UI is not available.
 
   void _showToast(BuildContext context, String message) {
     final overlay = Overlay.of(context);

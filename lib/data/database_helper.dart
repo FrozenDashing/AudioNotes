@@ -12,7 +12,7 @@ import 'todo_query_builder.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 10;
 
   DatabaseHelper._init();
 
@@ -42,7 +42,7 @@ class DatabaseHelper {
     const idType = 'TEXT PRIMARY KEY';
     const textType = 'TEXT NOT NULL';
     const intType = 'INTEGER NOT NULL';
-    const realType = 'REAL';
+
     const nullableTextType = 'TEXT';
     const nullableIntType = 'INTEGER';
 
@@ -50,6 +50,7 @@ class DatabaseHelper {
       CREATE TABLE todo_item (
         id $idType,
         text $textType,
+        description $nullableTextType,
         raw_text $nullableTextType,
         created_at $intType,
         updated_at $nullableIntType,
@@ -65,12 +66,17 @@ class DatabaseHelper {
         pinned INTEGER NOT NULL DEFAULT 0,
         completed_at $nullableIntType,
         deleted_at $nullableIntType,
-        duration_ms $nullableIntType,
         error_message $nullableTextType,
         model_version $nullableTextType,
         order_index $nullableIntType,
-        confidence $realType,
-        meta $nullableTextType
+        meta $nullableTextType,
+        calendar_event_id $nullableTextType,
+        calendar_id $nullableTextType,
+        calendar_mode $nullableTextType,
+        synced_at $nullableIntType,
+        sync_status $nullableTextType,
+        notification_id $nullableIntType,
+        notification_mode $nullableTextType
       )
     ''');
 
@@ -130,6 +136,36 @@ class DatabaseHelper {
         'CREATE UNIQUE INDEX idx_reminders_notification_id ON reminders(notification_id)');
     await db.execute(
         'CREATE INDEX idx_reminders_remind_at ON reminders(remind_at)');
+
+    // Sync records: track baseline/remote hashes and last sync time per entity
+    await db.execute('''
+      CREATE TABLE sync_records (
+        entity_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        baseline_hash TEXT,
+        remote_hash TEXT,
+        last_synced_at INTEGER,
+        PRIMARY KEY (entity_id, entity_type)
+      )
+    ''');
+
+    // Sync jobs: track pending upload/download operations and retries
+    await db.execute('''
+      CREATE TABLE sync_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        dirty_at INTEGER NOT NULL,
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT
+      )
+    ''');
+
+    await db.execute(
+        'CREATE INDEX idx_sync_jobs_entity ON sync_jobs(entity_id, entity_type)');
+    await db.execute(
+        'CREATE INDEX idx_sync_jobs_operation ON sync_jobs(operation)');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -137,7 +173,6 @@ class DatabaseHelper {
       // Add new columns for task lifecycle management
       await db.execute(
           'ALTER TABLE todo_item ADD COLUMN task_state INTEGER DEFAULT 2');
-      await db.execute('ALTER TABLE todo_item ADD COLUMN duration_ms INTEGER');
       await db.execute('ALTER TABLE todo_item ADD COLUMN error_message TEXT');
       await db.execute('ALTER TABLE todo_item ADD COLUMN model_version TEXT');
 
@@ -230,6 +265,179 @@ class DatabaseHelper {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_priority ON todo_item(priority)');
     }
+
+    if (oldVersion < 6) {
+      // Sync records: track baseline/remote hashes and last sync time per entity
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_records (
+          entity_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          baseline_hash TEXT,
+          remote_hash TEXT,
+          last_synced_at INTEGER,
+          PRIMARY KEY (entity_id, entity_type)
+        )
+      ''');
+
+      // Sync jobs: track pending upload/download operations and retries
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_jobs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          entity_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          operation TEXT NOT NULL,
+          dirty_at INTEGER NOT NULL,
+          retry_count INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT
+        )
+      ''');
+
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sync_jobs_entity ON sync_jobs(entity_id, entity_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sync_jobs_operation ON sync_jobs(operation)');
+    }
+
+    if (oldVersion < 8) {
+      await _rebuildTodoItemTableWithoutConfidence(db);
+    }
+
+    if (oldVersion < 9) {
+      await db.execute('ALTER TABLE todo_item ADD COLUMN description TEXT');
+    }
+
+    if (oldVersion < 10) {
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN calendar_event_id TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN calendar_id TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN calendar_mode TEXT');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN synced_at INTEGER');
+      await db.execute('ALTER TABLE todo_item ADD COLUMN sync_status TEXT');
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN notification_id INTEGER');
+      await db
+          .execute('ALTER TABLE todo_item ADD COLUMN notification_mode TEXT');
+    }
+  }
+
+  Future<void> _rebuildTodoItemTableWithoutConfidence(Database db) async {
+    await db.execute('PRAGMA foreign_keys=OFF');
+
+    try {
+      await db.execute('ALTER TABLE todo_item RENAME TO todo_item_old');
+
+      await db.execute('''
+        CREATE TABLE todo_item (
+          id TEXT PRIMARY KEY,
+          text TEXT NOT NULL,
+          description TEXT,
+          raw_text TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER,
+          audio_path TEXT,
+          task_state INTEGER NOT NULL DEFAULT 2,
+          status INTEGER NOT NULL DEFAULT 0,
+          priority INTEGER NOT NULL DEFAULT 1,
+          due_at INTEGER,
+          remind_at INTEGER,
+          repeat_type INTEGER NOT NULL DEFAULT 0,
+          repeat_rule TEXT,
+          category_id TEXT,
+          pinned INTEGER NOT NULL DEFAULT 0,
+          completed_at INTEGER,
+          deleted_at INTEGER,
+          error_message TEXT,
+          model_version TEXT,
+          order_index INTEGER,
+          meta TEXT,
+          calendar_event_id TEXT,
+          calendar_id TEXT,
+          calendar_mode TEXT,
+          synced_at INTEGER,
+          sync_status TEXT,
+          notification_id INTEGER,
+          notification_mode TEXT
+        )
+      ''');
+
+      await db.execute('''
+        INSERT INTO todo_item (
+          id,
+          text,
+          raw_text,
+          created_at,
+          updated_at,
+          audio_path,
+          task_state,
+          status,
+          priority,
+          due_at,
+          remind_at,
+          repeat_type,
+          repeat_rule,
+          category_id,
+          pinned,
+          completed_at,
+          deleted_at,
+          error_message,
+          model_version,
+          order_index,
+          meta,
+          calendar_event_id,
+          calendar_id,
+          calendar_mode,
+          synced_at,
+          sync_status,
+          notification_id,
+          notification_mode
+        )
+        SELECT
+          id,
+          text,
+          raw_text,
+          created_at,
+          updated_at,
+          audio_path,
+          task_state,
+          status,
+          priority,
+          due_at,
+          remind_at,
+          repeat_type,
+          repeat_rule,
+          category_id,
+          pinned,
+          completed_at,
+          deleted_at,
+          error_message,
+          model_version,
+          order_index,
+          meta,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL
+        FROM todo_item_old
+      ''');
+
+      await db.execute('DROP TABLE todo_item_old');
+
+      await db.execute('CREATE INDEX idx_created_at ON todo_item(created_at)');
+      await db
+          .execute('CREATE INDEX idx_order_index ON todo_item(order_index)');
+      await db.execute('CREATE INDEX idx_task_state ON todo_item(task_state)');
+      await db.execute('CREATE INDEX idx_priority ON todo_item(priority)');
+      await db.execute('CREATE INDEX idx_due_at ON todo_item(due_at)');
+      await db.execute('CREATE INDEX idx_remind_at ON todo_item(remind_at)');
+      await db
+          .execute('CREATE INDEX idx_category_id ON todo_item(category_id)');
+      await db.execute('CREATE INDEX idx_deleted_at ON todo_item(deleted_at)');
+    } finally {
+      await db.execute('PRAGMA foreign_keys=ON');
+    }
   }
 
   /// Insert a new todo item
@@ -255,21 +463,32 @@ class DatabaseHelper {
     return (maxOrderIndex ?? -1) + 1;
   }
 
-  /// Get all todo items sorted by created_at or order_index
-  Future<List<TodoItem>> getAllTodos({bool sortByOrder = false}) async {
+  /// Get all todo items sorted by created_at or order_index, optionally including deleted items
+  Future<List<TodoItem>> getAllTodos({
+    bool sortByOrder = false,
+    bool includeDeleted = false,
+  }) async {
     final options = TodoQueryOptions(
       sortField: sortByOrder ? TodoSortField.manual : TodoSortField.createdAt,
       direction: sortByOrder ? SortDirection.asc : SortDirection.desc,
     );
 
-    return getTodos(options);
+    return getTodos(options, includeDeleted: includeDeleted);
   }
 
   /// Get todo items based on query options
-  Future<List<TodoItem>> getTodos(TodoQueryOptions options) async {
+  Future<List<TodoItem>> getTodos(
+    TodoQueryOptions options, {
+    bool sortInDatabase = true,
+    bool includeDeleted = false,
+  }) async {
     final db = await database;
     final whereClauses = <String>[];
     final whereArgs = <Object?>[];
+
+    if (!includeDeleted) {
+      whereClauses.add('deleted_at IS NULL');
+    }
 
     if (options.onlyPending) {
       whereClauses.add('status = ?');
@@ -281,8 +500,9 @@ class DatabaseHelper {
       whereArgs.add(options.categoryId);
     }
 
-    final orderBy =
-        TodoQueryBuilder.buildOrderBy(options.sortField, options.direction);
+    final orderBy = sortInDatabase
+        ? TodoQueryBuilder.buildOrderBy(options.sortField, options.direction)
+        : null;
     final where = whereClauses.isEmpty ? null : whereClauses.join(' AND ');
 
     final maps = await db.query(
@@ -296,13 +516,23 @@ class DatabaseHelper {
   }
 
   /// Get a single todo item by ID
-  Future<TodoItem?> getTodoById(String id) async {
+  Future<TodoItem?> getTodoById(
+    String id, {
+    bool includeDeleted = false,
+  }) async {
     final db = await database;
+
+    final whereClauses = <String>['id = ?'];
+    final whereArgs = <Object?>[id];
+
+    if (!includeDeleted) {
+      whereClauses.add('deleted_at IS NULL');
+    }
 
     final maps = await db.query(
       'todo_item',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
     );
 
     if (maps.isNotEmpty) {
@@ -323,15 +553,57 @@ class DatabaseHelper {
     );
   }
 
-  /// Delete a todo item
+  /// Soft delete a todo item by moving it to the trash
   Future<int> deleteTodo(String id) async {
     final db = await database;
 
-    return await db.delete(
+    return await db.update(
       'todo_item',
-      where: 'id = ?',
+      {
+        'deleted_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ? AND deleted_at IS NULL',
       whereArgs: [id],
     );
+  }
+
+  /// Restore a todo item from the trash
+  Future<int> restoreTodo(String id) async {
+    final db = await database;
+
+    return await db.update(
+      'todo_item',
+      {
+        'deleted_at': null,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ? AND deleted_at IS NOT NULL',
+      whereArgs: [id],
+    );
+  }
+
+  /// Permanently delete a todo item and all of its persisted side effects
+  Future<void> purgeTodoPermanently(String id) async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      await txn.delete(
+        'sync_jobs',
+        where: 'entity_id = ? AND entity_type = ?',
+        whereArgs: [id, 'todo'],
+      );
+      await txn.delete(
+        'sync_records',
+        where: 'entity_id = ? AND entity_type = ?',
+        whereArgs: [id, 'todo'],
+      );
+      await txn.delete(
+        'todo_item',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   /// Update order indices for multiple items
@@ -554,13 +826,23 @@ class DatabaseHelper {
   }
 
   /// Get todos by task state
-  Future<List<TodoItem>> getTodosByTaskState(TodoTaskState state) async {
+  Future<List<TodoItem>> getTodosByTaskState(
+    TodoTaskState state, {
+    bool includeDeleted = false,
+  }) async {
     final db = await database;
+
+    final whereClauses = <String>['task_state = ?'];
+    final whereArgs = <Object?>[state.value];
+
+    if (!includeDeleted) {
+      whereClauses.add('deleted_at IS NULL');
+    }
 
     final maps = await db.query(
       'todo_item',
-      where: 'task_state = ?',
-      whereArgs: [state.value],
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
       orderBy: 'created_at DESC',
     );
 
@@ -568,28 +850,72 @@ class DatabaseHelper {
   }
 
   /// Get todos by category
-  Future<List<TodoItem>> getTodosByCategory(String categoryId) async {
+  Future<List<TodoItem>> getTodosByCategory(
+    String categoryId, {
+    bool includeDeleted = false,
+  }) async {
     final db = await database;
+    final whereClauses = <String>['category_id = ?'];
+    final whereArgs = <Object?>[categoryId];
+
+    if (!includeDeleted) {
+      whereClauses.add('deleted_at IS NULL');
+    }
+
     final maps = await db.query(
       'todo_item',
-      where: 'category_id = ? AND deleted_at IS NULL',
-      whereArgs: [categoryId],
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
       orderBy: 'created_at DESC',
     );
     return maps.map((map) => TodoItem.fromJson(map)).toList();
   }
 
   /// Get todos by tag
-  Future<List<TodoItem>> getTodosByTag(String tagId) async {
+  Future<List<TodoItem>> getTodosByTag(
+    String tagId, {
+    bool includeDeleted = false,
+  }) async {
     final db = await database;
+    final deletedFilter = includeDeleted ? '' : 'AND t.deleted_at IS NULL';
     final maps = await db.rawQuery('''
       SELECT t.*
       FROM todo_item t
       INNER JOIN todo_tags tt ON tt.todo_id = t.id
-      WHERE tt.tag_id = ? AND t.deleted_at IS NULL
+      WHERE tt.tag_id = ? $deletedFilter
       ORDER BY t.created_at DESC
     ''', [tagId]);
     return maps.map((map) => TodoItem.fromJson(map)).toList();
+  }
+
+  /// Get deleted todos for the trash view
+  Future<List<TodoItem>> getDeletedTodos() async {
+    final db = await database;
+    final maps = await db.query(
+      'todo_item',
+      where: 'deleted_at IS NOT NULL',
+      orderBy: 'deleted_at DESC, updated_at DESC, created_at DESC',
+    );
+    return maps.map((map) => TodoItem.fromJson(map)).toList();
+  }
+
+  /// Purge todo records that have stayed in trash longer than [cutoff].
+  Future<void> purgeDeletedTodosBefore(DateTime cutoff) async {
+    final deletedTodos = await getDeletedTodos();
+    for (final todo in deletedTodos) {
+      final deletedAt = todo.deletedAt;
+      if (deletedAt != null && deletedAt.isBefore(cutoff)) {
+        await purgeTodoPermanently(todo.id);
+      }
+    }
+  }
+
+  /// Permanently delete every todo currently in trash.
+  Future<void> purgeAllDeletedTodos() async {
+    final deletedTodos = await getDeletedTodos();
+    for (final todo in deletedTodos) {
+      await purgeTodoPermanently(todo.id);
+    }
   }
 
   /// Insert a category
@@ -695,6 +1021,30 @@ class DatabaseHelper {
       ORDER BY tg.name ASC
     ''', [todoId]);
     return maps.map((map) => Tag.fromJson(map)).toList();
+  }
+
+  /// Get tags for multiple todos (batch)
+  Future<Map<String, List<Tag>>> getTagsForTodos(List<String> todoIds) async {
+    if (todoIds.isEmpty) return {};
+    final db = await database;
+    final placeholders = List.filled(todoIds.length, '?').join(',');
+    final maps = await db.rawQuery('''
+      SELECT tt.todo_id as todo_id, tg.*
+      FROM tags tg
+      INNER JOIN todo_tags tt ON tt.tag_id = tg.id
+      WHERE tt.todo_id IN ($placeholders)
+      ORDER BY tg.name ASC
+    ''', todoIds);
+    final result = <String, List<Tag>>{};
+    for (final id in todoIds) {
+      result[id] = [];
+    }
+    for (final map in maps) {
+      final todoId = map['todo_id'] as String;
+      final tag = Tag.fromJson(map);
+      result[todoId]!.add(tag);
+    }
+    return result;
   }
 
   /// Replace tags for a todo
