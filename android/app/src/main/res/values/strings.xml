@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_quick_record_title">快速录音</string>
+    <string name="widget_quick_record_subtitle">点击开始录音</string>
+    <string name="widget_quick_record_hint">录音完成后自动转成待办</string>
+    <string name="widget_todo_summary_title">今日待办</string>
+    <string name="widget_todo_open_app">打开应用 &gt;</string>
+</resources>

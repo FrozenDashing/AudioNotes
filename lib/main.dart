@@ -44,6 +44,8 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
   }
 
   Future<void> _initializeServices() async {
+    final todoRepository = ref.read(todoRepositoryProvider);
+
     try {
       await ref.read(reminderServiceProvider).initialize();
 
@@ -60,7 +62,6 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
           },
         );
 
-        final todoRepository = ref.read(todoRepositoryProvider);
         final deletedTodos = await todoRepository.getDeletedTodos();
         for (final todo in deletedTodos) {
           final deletedAt = todo.deletedAt;
@@ -72,6 +73,13 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
       }
     } catch (e) {
       foundation.debugPrint('Reminder service initialization failed: $e');
+    }
+
+    try {
+      final todos = await todoRepository.getAllTodos(sortByOrder: true);
+      await ref.read(widgetSyncServiceProvider).syncTodoSummary(todos);
+    } catch (e) {
+      foundation.debugPrint('Widget sync initialization failed: $e');
     }
   }
 

@@ -12,6 +12,36 @@
         android:label="Audio Notes"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <receiver
+            android:name=".widgets.QuickRecordWidgetProvider"
+            android:exported="true"
+            android:permission="android.permission.BIND_APPWIDGET"
+            android:label="Quick Record Widget"
+            android:icon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_record_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widgets.TodoSummaryWidgetProvider"
+            android:exported="true"
+            android:permission="android.permission.BIND_APPWIDGET"
+            android:label="Todo Summary Widget"
+            android:icon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/todo_summary_widget_info" />
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
