@@ -10,7 +10,6 @@ import '../models/todo_group.dart';
 import '../models/todo_item.dart';
 import '../providers/app_providers.dart';
 import '../services/todo_grouping_service.dart';
-import '../utils/motion.dart';
 import 'todo_item_card.dart';
 
 /// Category shell that renders a todo group.
@@ -242,7 +241,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
     await ref.read(categoryRepositoryProvider).updateCategory(
           category.copyWith(name: newName, color: selectedColor),
         );
-    ref.invalidate(categoryListProvider);
+    final _ = ref.refresh(categoryListProvider);
   }
 
   Future<void> _deleteCategory() async {
@@ -275,8 +274,9 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
     await ref
         .read(categoryRepositoryProvider)
         .deleteCategory(widget.group.categoryId!);
+    final _ = ref.refresh(categoryListProvider);
+    ref.invalidate(todoListProvider);
     await ref.read(todoListProvider.notifier).loadTodos();
-    ref.invalidate(categoryListProvider);
   }
 
   String _noteCountLabel(int count) {
@@ -309,157 +309,196 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
         ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.85)
         : theme.colorScheme.onSurfaceVariant;
 
-    return motionEntrance(
-      context,
-      Container(
-        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(
-            alpha: theme.brightness == Brightness.dark ? 0.7 : 0.92,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accentColor.withValues(alpha: 0.18)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.7 : 0.92,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(width: 5, color: accentColor),
-                    const SizedBox(width: 0),
-                  ],
-                ),
-              ),
-              Column(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  InkWell(
-                    onTap: _toggleExpanded,
+                  Container(width: 5, color: accentColor),
+                  const SizedBox(width: 0),
+                ],
+              ),
+            ),
+            Column(
+              children: [
+                InkWell(
+                  onTap: _toggleExpanded,
+                  borderRadius: headerBorderRadius,
+                  customBorder: RoundedRectangleBorder(
                     borderRadius: headerBorderRadius,
-                    customBorder: RoundedRectangleBorder(
-                      borderRadius: headerBorderRadius,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onLongPress: widget.group.categoryId == null ||
-                                      widget.group.isCompletedAggregate
-                                  ? null
-                                  : _showCategoryActions,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    displayGroupTitle,
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: groupTextColor,
-                                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onLongPress: widget.group.categoryId == null ||
+                                    widget.group.isCompletedAggregate
+                                ? null
+                                : _showCategoryActions,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  displayGroupTitle,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: groupTextColor,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _noteCountLabel(widget.group.items.length),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: groupSubTextColor,
-                                    ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _noteCountLabel(widget.group.items.length),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: groupSubTextColor,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (widget.isManualSortEnabled)
-                            ReorderableDragStartListener(
-                              index: widget.groupIndex,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 6.0),
-                                child: SizedBox(
-                                  width: 64,
-                                  height: 56,
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.drag_indicator,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                        ),
+                        if (widget.isManualSortEnabled)
+                          ReorderableDragStartListener(
+                            index: widget.groupIndex,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6.0),
+                              child: SizedBox(
+                                width: 64,
+                                height: 56,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.drag_indicator,
+                                    color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
                             ),
-                          IconButton(
-                            onPressed: _toggleExpanded,
-                            icon: AnimatedRotation(
-                              turns: _isExpanded ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 180),
-                              child: Icon(
-                                Icons.expand_more,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                          ),
+                        IconButton(
+                          onPressed: _toggleExpanded,
+                          icon: AnimatedRotation(
+                            turns: _isExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            child: Icon(
+                              Icons.expand_more,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOut,
-                    child: _isExpanded
-                        ? Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                            child: Column(
-                              children: [
-                                const SizedBox(height: 2),
-                                if (widget.group.items.isNotEmpty)
-                                  _TodoGroupBody(
-                                    items: widget.group.items,
-                                    groupKey: widget.group.groupKey,
-                                    categoryId: widget.group.categoryId,
-                                    isCompletedAggregate:
-                                        widget.group.isCompletedAggregate,
-                                    isManualSortEnabled:
-                                        widget.isManualSortEnabled,
-                                    onMoveItemToGroup: widget.onMoveItemToGroup,
-                                    onReorderWithinGroup:
-                                        widget.onReorderWithinGroup,
-                                  )
-                                else
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 18),
-                                    child: Text(
-                                      context.tr('home.empty.title'),
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                _buildExpandedBody(
+                  context,
+                  theme,
+                  visible: _isExpanded,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildExpandedBody(
+    BuildContext context,
+    ThemeData theme, {
+    required bool visible,
+  }) {
+    final body = Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+      child: Column(
+        children: [
+          const SizedBox(height: 2),
+          if (widget.group.items.isNotEmpty)
+            _TodoGroupBody(
+              items: widget.group.items,
+              groupKey: widget.group.groupKey,
+              categoryId: widget.group.categoryId,
+              isCompletedAggregate: widget.group.isCompletedAggregate,
+              isManualSortEnabled: widget.isManualSortEnabled,
+              onMoveItemToGroup: widget.onMoveItemToGroup,
+              onReorderWithinGroup: widget.onReorderWithinGroup,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                context.tr('home.empty.title'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.topLeft,
+          children: [
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
+        );
+      },
+      transitionBuilder: (child, animation) {
+        final fade = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        );
+        final size = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
+
+        return ClipRect(
+          child: FadeTransition(
+            opacity: fade,
+            child: SizeTransition(
+              sizeFactor: size,
+              axisAlignment: -1,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: visible
+          ? KeyedSubtree(
+              key: const ValueKey('expanded-body'),
+              child: body,
+            )
+          : const SizedBox.shrink(key: ValueKey('collapsed-body')),
     );
   }
 }
@@ -501,17 +540,12 @@ class _TodoGroupBodyState extends State<_TodoGroupBody> {
 
       for (var index = 0; index < widget.items.length; index++) {
         completedChildren.add(
-          motionEntrance(
-            context,
-            TodoItemCard(
-              key: ValueKey(widget.items[index].id),
-              todoId: widget.items[index].id,
-              showCategoryChip: false,
-              compact: true,
-              subdued: true,
-            ),
-            duration: MotionTokens.medium,
-            slideY: 0.02,
+          TodoItemCard(
+            key: ValueKey(widget.items[index].id),
+            todoId: widget.items[index].id,
+            showCategoryChip: false,
+            compact: true,
+            subdued: true,
           ),
         );
 
@@ -528,22 +562,17 @@ class _TodoGroupBodyState extends State<_TodoGroupBody> {
 
       for (var index = 0; index < widget.items.length; index++) {
         staticChildren.add(
-          motionEntrance(
-            context,
-            Padding(
-              key: ValueKey(widget.items[index].id),
-              padding: EdgeInsets.only(
-                bottom: index == widget.items.length - 1 ? 0 : 4,
-              ),
-              child: TodoItemCard(
-                todoId: widget.items[index].id,
-                showCategoryChip: false,
-                compact: true,
-                subdued: false,
-              ),
+          Padding(
+            key: ValueKey(widget.items[index].id),
+            padding: EdgeInsets.only(
+              bottom: index == widget.items.length - 1 ? 0 : 4,
             ),
-            duration: MotionTokens.medium,
-            slideY: 0.02,
+            child: TodoItemCard(
+              todoId: widget.items[index].id,
+              showCategoryChip: false,
+              compact: true,
+              subdued: false,
+            ),
           ),
         );
       }
@@ -584,9 +613,6 @@ class _TodoGroupBodyState extends State<_TodoGroupBody> {
         onReorder: (oldIndex, newIndex) async {
           debugPrint(
               'intra-group onReorder called: $oldIndex -> $newIndex for group ${widget.groupKey}');
-          // Adjust newIndex as ReorderableListView's newIndex refers to
-          // the index after removal; when moving downwards the target
-          // index is one greater than desired.
           if (oldIndex < newIndex) {
             newIndex -= 1;
           }

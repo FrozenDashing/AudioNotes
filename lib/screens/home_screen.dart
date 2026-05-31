@@ -572,40 +572,35 @@ class _TodoListContent extends ConsumerWidget {
           builder: (context, ref, _) {
             final group = ref.watch(todoGroupProvider(key));
             if (group == null) return const SizedBox.shrink();
-            return motionEntrance(
-              context,
-              TodoGroupSection(
-                key: ValueKey(group.groupKey),
-                group: group,
-                groupIndex: index,
-                isManualSortEnabled: isManualSortEnabled,
-                onMoveItemToGroup: (
-                  todoId,
-                  targetCategoryId,
-                  targetIndex, {
-                  sourceGroupKey,
-                  sourceIndex,
-                }) async {
-                  await ref
-                      .read(todoListProvider.notifier)
-                      .moveTodoToCategoryAtIndex(
-                        todoId,
-                        targetCategoryId,
-                        targetIndex,
-                        sourceGroupKey: sourceGroupKey,
-                        sourceIndex: sourceIndex,
-                      );
-                },
-                onReorderWithinGroup: (oldIndex, newIndex) async {
-                  await ref.read(todoListProvider.notifier).reorderTodosInGroup(
-                        group.items,
-                        oldIndex,
-                        newIndex,
-                      );
-                },
-              ),
-              duration: MotionTokens.page,
-              slideY: 0.03,
+            return TodoGroupSection(
+              key: ValueKey(group.groupKey),
+              group: group,
+              groupIndex: index,
+              isManualSortEnabled: isManualSortEnabled,
+              onMoveItemToGroup: (
+                todoId,
+                targetCategoryId,
+                targetIndex, {
+                sourceGroupKey,
+                sourceIndex,
+              }) async {
+                await ref
+                    .read(todoListProvider.notifier)
+                    .moveTodoToCategoryAtIndex(
+                      todoId,
+                      targetCategoryId,
+                      targetIndex,
+                      sourceGroupKey: sourceGroupKey,
+                      sourceIndex: sourceIndex,
+                    );
+              },
+              onReorderWithinGroup: (oldIndex, newIndex) async {
+                await ref.read(todoListProvider.notifier).reorderTodosInGroup(
+                      group.items,
+                      oldIndex,
+                      newIndex,
+                    );
+              },
             );
           },
         );
@@ -736,32 +731,49 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     final recordingState = ref.watch(recordingStateProvider);
     final settings = ref.watch(settingsProvider);
 
+    final theme = Theme.of(context);
+    final isLightTheme = theme.brightness == Brightness.light;
+    // Check if currently recording (affects display regardless of quick text mode)
+    final isRecording = recordingState == RecordingState.recording;
+
     final fab = FloatingActionButton.extended(
-      onPressed: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : _getOnPressed(recordingState, ref, context),
+      onPressed: isRecording
+          ? _getOnPressed(recordingState, ref, context)
+          : settings.enableQuickTextTodo
+              ? () => _openQuickTextDialog(context)
+              : _getOnPressed(recordingState, ref, context),
       label: Text(
-        settings.enableQuickTextTodo
-            ? context.tr('home.quickTodo')
-            : (recordingState == RecordingState.idle
-                ? (widget.isModelReady
-                    ? context.tr('home.record.start')
-                    : context.tr('home.model.downloadFirst'))
-                : recordingState == RecordingState.recording
-                    ? context.tr('home.record.stop')
+        isRecording
+            ? context.tr('home.record.stop')
+            : settings.enableQuickTextTodo
+                ? context.tr('home.quickTodo')
+                : (recordingState == RecordingState.idle
+                    ? (widget.isModelReady
+                        ? context.tr('home.record.start')
+                        : context.tr('home.model.downloadFirst'))
                     : context.tr('home.record.processing')),
       ),
       icon: Icon(
-        settings.enableQuickTextTodo
-            ? Icons.edit_outlined
-            : (recordingState == RecordingState.idle ? Icons.mic : Icons.stop),
+        isRecording
+            ? Icons.stop
+            : (settings.enableQuickTextTodo ? Icons.edit_outlined : Icons.mic),
       ),
       backgroundColor:
           !widget.isModelReady && recordingState == RecordingState.idle
               ? Colors.orange
               : recordingState == RecordingState.recording
                   ? Colors.red
-                  : Theme.of(context).primaryColor,
+                  : (isLightTheme
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : theme.colorScheme.primary),
+      foregroundColor:
+          !widget.isModelReady && recordingState == RecordingState.idle
+              ? Colors.white
+              : recordingState == RecordingState.recording
+                  ? Colors.white
+                  : (isLightTheme
+                      ? theme.colorScheme.onSurfaceVariant
+                      : theme.colorScheme.onPrimary),
     );
 
     // Tap-to-scale feedback on every press, no idle bounce
@@ -769,13 +781,17 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      onTap: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : null,
-      onLongPress: settings.enableQuickTextTodo
-          ? () => _startRecording(
-              ref.read(recordingStateProvider.notifier), context)
-          : null,
+      onTap: isRecording
+          ? null
+          : settings.enableQuickTextTodo
+              ? () => _openQuickTextDialog(context)
+              : null,
+      onLongPress: isRecording
+          ? null
+          : settings.enableQuickTextTodo
+              ? () => _startRecording(
+                  ref.read(recordingStateProvider.notifier), context)
+              : null,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
@@ -793,12 +809,18 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
+    final theme = Theme.of(context);
+
     final successMsg = context.tr('home.quickTodoCreated');
     final failMsgPrefix = context.tr('home.quickTodoCreateFailed');
 
     final text = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(

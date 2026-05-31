@@ -51,7 +51,7 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
           children: [
             _buildThemeOption(
               context.tr('themePicker.default'),
-              Theme.of(context).colorScheme.primary,
+              const Color(0xFF0B3D91), // fixed deep blue sample
               ThemeModeOption.light,
             ),
             _buildThemeOption(
@@ -219,13 +219,15 @@ class _ThemeColorPickerState extends State<ThemeColorPicker> {
   }
 
   Color _getCurrentThemeColor() {
+    // For preview and examples, do not follow the live theme primary color for the
+    // default/light option — show the fixed deep blue sample instead.
     if (widget.currentThemeMode == ThemeModeOption.system) {
       return Theme.of(context).colorScheme.primary;
     } else if (widget.currentThemeMode == ThemeModeOption.custom &&
         widget.currentCustomColor != null) {
       return widget.currentCustomColor!;
     } else {
-      return Theme.of(context).colorScheme.primary;
+      return const Color(0xFF0B3D91);
     }
   }
 

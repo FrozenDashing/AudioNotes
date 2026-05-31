@@ -23,6 +23,11 @@ class _NotificationModeSelectorState
     final settings = ref.watch(settingsProvider);
 
     return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
