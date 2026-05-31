@@ -733,25 +733,30 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
 
     final theme = Theme.of(context);
     final isLightTheme = theme.brightness == Brightness.light;
+    // Check if currently recording (affects display regardless of quick text mode)
+    final isRecording = recordingState == RecordingState.recording;
+
     final fab = FloatingActionButton.extended(
-      onPressed: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : _getOnPressed(recordingState, ref, context),
+      onPressed: isRecording
+          ? _getOnPressed(recordingState, ref, context)
+          : settings.enableQuickTextTodo
+              ? () => _openQuickTextDialog(context)
+              : _getOnPressed(recordingState, ref, context),
       label: Text(
-        settings.enableQuickTextTodo
-            ? context.tr('home.quickTodo')
-            : (recordingState == RecordingState.idle
-                ? (widget.isModelReady
-                    ? context.tr('home.record.start')
-                    : context.tr('home.model.downloadFirst'))
-                : recordingState == RecordingState.recording
-                    ? context.tr('home.record.stop')
+        isRecording
+            ? context.tr('home.record.stop')
+            : settings.enableQuickTextTodo
+                ? context.tr('home.quickTodo')
+                : (recordingState == RecordingState.idle
+                    ? (widget.isModelReady
+                        ? context.tr('home.record.start')
+                        : context.tr('home.model.downloadFirst'))
                     : context.tr('home.record.processing')),
       ),
       icon: Icon(
-        settings.enableQuickTextTodo
-            ? Icons.edit_outlined
-            : (recordingState == RecordingState.idle ? Icons.mic : Icons.stop),
+        isRecording
+            ? Icons.stop
+            : (settings.enableQuickTextTodo ? Icons.edit_outlined : Icons.mic),
       ),
       backgroundColor:
           !widget.isModelReady && recordingState == RecordingState.idle
@@ -776,13 +781,17 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      onTap: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : null,
-      onLongPress: settings.enableQuickTextTodo
-          ? () => _startRecording(
-              ref.read(recordingStateProvider.notifier), context)
-          : null,
+      onTap: isRecording
+          ? null
+          : settings.enableQuickTextTodo
+              ? () => _openQuickTextDialog(context)
+              : null,
+      onLongPress: isRecording
+          ? null
+          : settings.enableQuickTextTodo
+              ? () => _startRecording(
+                  ref.read(recordingStateProvider.notifier), context)
+              : null,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
