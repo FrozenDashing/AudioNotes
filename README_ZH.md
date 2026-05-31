@@ -1,5 +1,12 @@
 # AudioNotes - 离线语音转文本待办事项应用
 
+![Flutter](https://img.shields.io/badge/Flutter-3.0.0%2B-blue?style=flat)
+![Dart](https://img.shields.io/badge/Dart-3.0.0%2B-blue?style=flat)
+![Riverpod](https://img.shields.io/badge/Riverpod-3.3.1%2B-green?style=flat)
+![SQLite](https://img.shields.io/badge/SQLite-sqflite-blue?style=flat)
+![Vosk ASR](https://img.shields.io/badge/Vosk-ASR-orange?style=flat)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
+
 [English Version](./README.md) | 中文版
 
 AudioNotes 是一款离线优先的移动应用，使用 Vosk 自动语音识别（ASR）将语音转换为可操作的待办事项。该应用专为提高生产力而设计，允许用户无需双手操作即可记录想法，并自动生成有组织的待办事项列表，无需互联网连接。应用具有基于类别的分组、高级待办事项管理和全面的组织工具，以最大化效率。

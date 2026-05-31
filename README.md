@@ -1,5 +1,12 @@
 # AudioNotes - Offline Speech-to-Text Todo Application
 
+![Flutter](https://img.shields.io/badge/Flutter-3.0.0%2B-blue?style=flat)
+![Dart](https://img.shields.io/badge/Dart-3.0.0%2B-blue?style=flat)
+![Riverpod](https://img.shields.io/badge/Riverpod-3.3.1%2B-green?style=flat)
+![SQLite](https://img.shields.io/badge/SQLite-sqflite-blue?style=flat)
+![Vosk ASR](https://img.shields.io/badge/Vosk-ASR-orange?style=flat)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
+
 [中文版](./README_ZH.md) | English Version
 
 AudioNotes is an offline-first mobile application that converts speech into actionable todo items using Vosk Automatic Speech Recognition (ASR). Designed for productivity, it allows users to record thoughts hands-free and automatically generates organized todo lists without requiring internet connectivity. The application features category-based grouping, advanced todo management, and comprehensive organizational tools to maximize efficiency.
