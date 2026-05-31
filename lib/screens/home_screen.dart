@@ -572,40 +572,35 @@ class _TodoListContent extends ConsumerWidget {
           builder: (context, ref, _) {
             final group = ref.watch(todoGroupProvider(key));
             if (group == null) return const SizedBox.shrink();
-            return motionEntrance(
-              context,
-              TodoGroupSection(
-                key: ValueKey(group.groupKey),
-                group: group,
-                groupIndex: index,
-                isManualSortEnabled: isManualSortEnabled,
-                onMoveItemToGroup: (
-                  todoId,
-                  targetCategoryId,
-                  targetIndex, {
-                  sourceGroupKey,
-                  sourceIndex,
-                }) async {
-                  await ref
-                      .read(todoListProvider.notifier)
-                      .moveTodoToCategoryAtIndex(
-                        todoId,
-                        targetCategoryId,
-                        targetIndex,
-                        sourceGroupKey: sourceGroupKey,
-                        sourceIndex: sourceIndex,
-                      );
-                },
-                onReorderWithinGroup: (oldIndex, newIndex) async {
-                  await ref.read(todoListProvider.notifier).reorderTodosInGroup(
-                        group.items,
-                        oldIndex,
-                        newIndex,
-                      );
-                },
-              ),
-              duration: MotionTokens.page,
-              slideY: 0.03,
+            return TodoGroupSection(
+              key: ValueKey(group.groupKey),
+              group: group,
+              groupIndex: index,
+              isManualSortEnabled: isManualSortEnabled,
+              onMoveItemToGroup: (
+                todoId,
+                targetCategoryId,
+                targetIndex, {
+                sourceGroupKey,
+                sourceIndex,
+              }) async {
+                await ref
+                    .read(todoListProvider.notifier)
+                    .moveTodoToCategoryAtIndex(
+                      todoId,
+                      targetCategoryId,
+                      targetIndex,
+                      sourceGroupKey: sourceGroupKey,
+                      sourceIndex: sourceIndex,
+                    );
+              },
+              onReorderWithinGroup: (oldIndex, newIndex) async {
+                await ref.read(todoListProvider.notifier).reorderTodosInGroup(
+                      group.items,
+                      oldIndex,
+                      newIndex,
+                    );
+              },
             );
           },
         );
