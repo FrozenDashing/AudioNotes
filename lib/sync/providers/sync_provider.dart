@@ -128,11 +128,13 @@ class SyncNotifier extends Notifier<SyncState> {
     final result = await _coordinator.syncNow();
 
     if (result.success) {
-      ref.invalidate(todoListProvider);
+      // 主动调用 loadTodos() 确保数据立即从数据库重新加载
+      await ref.read(todoListProvider.notifier).loadTodos();
+      // 刷新其他相关 providers
       ref.invalidate(categoryListProvider);
       ref.invalidate(tagListProvider);
       ref.invalidate(tagsForTodoProvider);
-      ref.invalidate(todoTagsCacheNotifierProvider);
+      ref.read(todoTagsCacheNotifierProvider.notifier).invalidate();
     }
 
     state = state.copyWith(

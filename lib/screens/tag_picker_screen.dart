@@ -58,7 +58,13 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
                             if (created != null && context.mounted) {
                               ref.invalidate(tagListProvider);
                               ref.invalidate(tagsForTodoProvider);
-                              ref.invalidate(todoTagsCacheNotifierProvider);
+                              // Refresh tags cache immediately after invalidation
+                              final todos =
+                                  await ref.read(todoListProvider.future);
+                              await ref
+                                  .read(todoTagsCacheNotifierProvider.notifier)
+                                  .refreshForTodos(
+                                      todos.map((t) => t.id).toList());
                             }
                           },
                         );
@@ -197,7 +203,11 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
     await ref.read(tagRepositoryProvider).updateTag(tag.copyWith(name: name));
     ref.invalidate(tagListProvider);
     ref.invalidate(tagsForTodoProvider);
-    ref.invalidate(todoTagsCacheNotifierProvider);
+    // Refresh tags cache immediately after invalidation
+    final todos = await ref.read(todoListProvider.future);
+    await ref
+        .read(todoTagsCacheNotifierProvider.notifier)
+        .refreshForTodos(todos.map((t) => t.id).toList());
   }
 
   Future<void> _deleteTag(BuildContext context, Tag tag) async {
@@ -233,6 +243,10 @@ class _TagPickerScreenState extends ConsumerState<TagPickerScreen> {
     });
     ref.invalidate(tagListProvider);
     ref.invalidate(tagsForTodoProvider);
-    ref.invalidate(todoTagsCacheNotifierProvider);
+    // Refresh tags cache immediately after invalidation
+    final todos = await ref.read(todoListProvider.future);
+    await ref
+        .read(todoTagsCacheNotifierProvider.notifier)
+        .refreshForTodos(todos.map((t) => t.id).toList());
   }
 }
