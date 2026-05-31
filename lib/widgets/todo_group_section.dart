@@ -242,7 +242,7 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
     await ref.read(categoryRepositoryProvider).updateCategory(
           category.copyWith(name: newName, color: selectedColor),
         );
-    ref.invalidate(categoryListProvider);
+    final _ = ref.refresh(categoryListProvider);
   }
 
   Future<void> _deleteCategory() async {
@@ -275,8 +275,9 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
     await ref
         .read(categoryRepositoryProvider)
         .deleteCategory(widget.group.categoryId!);
+    final _ = ref.refresh(categoryListProvider);
+    ref.invalidate(todoListProvider);
     await ref.read(todoListProvider.notifier).loadTodos();
-    ref.invalidate(categoryListProvider);
   }
 
   String _noteCountLabel(int count) {

@@ -67,7 +67,7 @@ class CategoryPickerScreen extends ConsumerWidget {
                                 ),
                               );
                               if (created != null && context.mounted) {
-                                ref.invalidate(categoryListProvider);
+                                final _ = ref.refresh(categoryListProvider);
                               }
                             },
                           );
@@ -101,7 +101,7 @@ class CategoryPickerScreen extends ConsumerWidget {
                             ),
                           );
                           if (created != null && context.mounted) {
-                            ref.invalidate(categoryListProvider);
+                            final _ = ref.refresh(categoryListProvider);
                           }
                         },
                         child: Text(context.tr('category.addAction')),
@@ -247,7 +247,7 @@ class CategoryPickerScreen extends ConsumerWidget {
     await ref.read(categoryRepositoryProvider).updateCategory(
           category.copyWith(name: newName, color: selectedColor),
         );
-    ref.invalidate(categoryListProvider);
+    final _ = ref.refresh(categoryListProvider);
     ref.invalidate(todoListProvider);
   }
 
@@ -283,8 +283,9 @@ class CategoryPickerScreen extends ConsumerWidget {
     }
 
     await ref.read(categoryRepositoryProvider).deleteCategory(category.id);
-    ref.invalidate(categoryListProvider);
+    final _ = ref.refresh(categoryListProvider);
     ref.invalidate(todoListProvider);
+    await ref.read(todoListProvider.notifier).loadTodos();
     if (selectedCategoryId == category.id && context.mounted) {
       Navigator.pop(context, null);
     }
