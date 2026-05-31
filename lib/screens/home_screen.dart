@@ -731,6 +731,8 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     final recordingState = ref.watch(recordingStateProvider);
     final settings = ref.watch(settingsProvider);
 
+    final theme = Theme.of(context);
+    final isLightTheme = theme.brightness == Brightness.light;
     final fab = FloatingActionButton.extended(
       onPressed: settings.enableQuickTextTodo
           ? () => _openQuickTextDialog(context)
@@ -756,7 +758,17 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
               ? Colors.orange
               : recordingState == RecordingState.recording
                   ? Colors.red
-                  : Theme.of(context).primaryColor,
+                  : (isLightTheme
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : theme.colorScheme.primary),
+      foregroundColor:
+          !widget.isModelReady && recordingState == RecordingState.idle
+              ? Colors.white
+              : recordingState == RecordingState.recording
+                  ? Colors.white
+                  : (isLightTheme
+                      ? theme.colorScheme.onSurfaceVariant
+                      : theme.colorScheme.onPrimary),
     );
 
     // Tap-to-scale feedback on every press, no idle bounce
@@ -788,12 +800,18 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
+    final theme = Theme.of(context);
+
     final successMsg = context.tr('home.quickTodoCreated');
     final failMsgPrefix = context.tr('home.quickTodoCreateFailed');
 
     final text = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(

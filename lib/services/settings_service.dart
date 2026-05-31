@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/settings_state.dart';
+import '../themes/todo_priority_palette.dart';
 
 /// Service for managing app-wide settings
 class SettingsService {
@@ -54,18 +55,38 @@ class SettingsService {
     final textColor =
         brightness == Brightness.dark ? Colors.white : Colors.black;
 
+    final cs = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: brightness,
+    ).copyWith(
+      surface: brightness == Brightness.dark
+          ? const Color(0xFF121212)
+          : Colors.white,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      // Priority palette extension and checkbox styling
+      extensions: <ThemeExtension<dynamic>>[
+        TodoPriorityPalette(
+          urgent: brightness == Brightness.dark
+              ? const Color(0xFFFF6B6B)
+              : const Color(0xFFE5484D),
+          high: brightness == Brightness.dark
+              ? const Color(0xFFFFB86B)
+              : const Color(0xFFF97316),
+          // Use fixed example colors (do not follow seed/primary color)
+          normal: brightness == Brightness.dark
+              ? const Color(0xFF7AB8FF)
+              : const Color(0xFF64748B), // Slate 500
+          low: brightness == Brightness.dark
+              ? const Color(0xFF0F172A)
+              : const Color(0xFFF1F5F9), // near-background slate
+        ),
+      ],
       primarySwatch: _createMaterialColor(primaryColor),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: brightness,
-      ).copyWith(
-        surface: brightness == Brightness.dark
-            ? const Color(0xFF121212)
-            : Colors.white,
-      ),
+      colorScheme: cs,
       textTheme: textTheme
           .apply(bodyColor: textColor, displayColor: textColor)
           .copyWith(
@@ -87,6 +108,20 @@ class SettingsService {
             labelSmall: _scaledTextStyle(textTheme.labelSmall, fontScale),
           ),
       primaryTextTheme: textTheme,
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          if (selected) {
+            // slightly darker than primary
+            return Color.alphaBlend(
+              Colors.black.withAlpha((0.12 * 255).round()),
+              cs.primary,
+            ).withAlpha((0.95 * 255).round());
+          }
+          return cs.outlineVariant;
+        }),
+        checkColor: WidgetStateProperty.all(cs.onPrimary),
+      ),
     );
   }
 
@@ -97,6 +132,9 @@ class SettingsService {
       return settings.customThemeColor!;
     }
 
+    // Default theme color: keep original default (blue). The app's first-run
+    // behavior may use a deep-blue sample for previews, but we do not hard-code
+    // the default theme color here so settings UI remains unconstrained.
     return Colors.blue;
   }
 

@@ -163,7 +163,7 @@
     }
   },
   "themePicker": {
-    "default": "默认",
+  "default": "深蓝",
     "blue": "蓝色",
     "warmOrange": "暖橙",
     "deepGreen": "深绿",

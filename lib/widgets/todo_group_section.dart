@@ -411,41 +411,94 @@ class _TodoGroupSectionState extends ConsumerState<TodoGroupSection> {
                     ),
                   ),
                 ),
-                if (_isExpanded)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 2),
-                        if (widget.group.items.isNotEmpty)
-                          _TodoGroupBody(
-                            items: widget.group.items,
-                            groupKey: widget.group.groupKey,
-                            categoryId: widget.group.categoryId,
-                            isCompletedAggregate:
-                                widget.group.isCompletedAggregate,
-                            isManualSortEnabled: widget.isManualSortEnabled,
-                            onMoveItemToGroup: widget.onMoveItemToGroup,
-                            onReorderWithinGroup: widget.onReorderWithinGroup,
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            child: Text(
-                              context.tr('home.empty.title'),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                _buildExpandedBody(
+                  context,
+                  theme,
+                  visible: _isExpanded,
+                ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildExpandedBody(
+    BuildContext context,
+    ThemeData theme, {
+    required bool visible,
+  }) {
+    final body = Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+      child: Column(
+        children: [
+          const SizedBox(height: 2),
+          if (widget.group.items.isNotEmpty)
+            _TodoGroupBody(
+              items: widget.group.items,
+              groupKey: widget.group.groupKey,
+              categoryId: widget.group.categoryId,
+              isCompletedAggregate: widget.group.isCompletedAggregate,
+              isManualSortEnabled: widget.isManualSortEnabled,
+              onMoveItemToGroup: widget.onMoveItemToGroup,
+              onReorderWithinGroup: widget.onReorderWithinGroup,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Text(
+                context.tr('home.empty.title'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.topLeft,
+          children: [
+            ...previousChildren,
+            if (currentChild != null) currentChild,
+          ],
+        );
+      },
+      transitionBuilder: (child, animation) {
+        final fade = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        );
+        final size = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
+
+        return ClipRect(
+          child: FadeTransition(
+            opacity: fade,
+            child: SizeTransition(
+              sizeFactor: size,
+              axisAlignment: -1,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: visible
+          ? KeyedSubtree(
+              key: const ValueKey('expanded-body'),
+              child: body,
+            )
+          : const SizedBox.shrink(key: ValueKey('collapsed-body')),
     );
   }
 }
@@ -560,9 +613,6 @@ class _TodoGroupBodyState extends State<_TodoGroupBody> {
         onReorder: (oldIndex, newIndex) async {
           debugPrint(
               'intra-group onReorder called: $oldIndex -> $newIndex for group ${widget.groupKey}');
-          // Adjust newIndex as ReorderableListView's newIndex refers to
-          // the index after removal; when moving downwards the target
-          // index is one greater than desired.
           if (oldIndex < newIndex) {
             newIndex -= 1;
           }

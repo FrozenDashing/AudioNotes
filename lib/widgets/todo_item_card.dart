@@ -4,6 +4,7 @@ import '../l10n/app_i18n.dart';
 import '../models/tag.dart';
 import '../models/todo_item.dart';
 import '../models/todo_priority.dart';
+import '../utils/priority_color.dart';
 import '../providers/app_providers.dart';
 import '../screens/category_picker_screen.dart';
 import '../screens/tag_picker_screen.dart';
@@ -312,6 +313,7 @@ class TodoItemCard extends ConsumerWidget {
               child: _buildMetaRow(
                 context,
                 customTags: tags,
+                priority: todo.priority,
                 priorityLabel: priorityLabel,
                 remindAt: todo.remindAt,
                 dueAt: todo.dueAt,
@@ -378,6 +380,7 @@ class TodoItemCard extends ConsumerWidget {
               child: _buildMetaRow(
                 context,
                 customTags: tags,
+                priority: todo.priority,
                 priorityLabel: priorityLabel,
                 remindAt: todo.remindAt,
                 dueAt: todo.dueAt,
@@ -440,6 +443,7 @@ class TodoItemCard extends ConsumerWidget {
           child: _buildInlineMetaRow(
             context,
             customTags: tags,
+            priority: todo.priority,
             priorityLabel: priorityLabel,
             remindAt: todo.remindAt,
             dueAt: todo.dueAt,
@@ -714,6 +718,7 @@ class TodoItemCard extends ConsumerWidget {
   Widget _buildMetaRow(
     BuildContext context, {
     required List<Tag> customTags,
+    required TodoPriority priority,
     required String? priorityLabel,
     required DateTime? remindAt,
     required DateTime? dueAt,
@@ -754,7 +759,7 @@ class TodoItemCard extends ConsumerWidget {
           addChip(
             icon: Icons.flag_outlined,
             label: priorityLabel,
-            color: theme.colorScheme.outline,
+            color: resolvePriorityColor(context, priority),
             onTap: onPriorityTap,
           );
         }
@@ -895,6 +900,7 @@ class TodoItemCard extends ConsumerWidget {
   Widget _buildInlineMetaRow(
     BuildContext context, {
     required List<Tag> customTags,
+    required TodoPriority priority,
     required String? priorityLabel,
     required DateTime? remindAt,
     required DateTime? dueAt,
@@ -914,7 +920,7 @@ class TodoItemCard extends ConsumerWidget {
           context,
           icon: Icons.flag_outlined,
           label: priorityLabel,
-          color: theme.colorScheme.outline,
+          color: resolvePriorityColor(context, priority),
           compact: compact,
           onTap: onPriorityTap,
         ),
