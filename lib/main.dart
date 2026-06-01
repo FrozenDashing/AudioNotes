@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_i18n.dart';
+import 'sync/background/webdav_background_sync.dart';
 import 'screens/home_screen.dart';
 import 'models/settings_state.dart';
 import 'providers/app_providers.dart';
@@ -19,6 +20,7 @@ void main() async {
 
   final notificationService = AwesomeNotificationService();
   await notificationService.initialize();
+  await initializeWebDavBackgroundSync();
 
   runApp(const ProviderScope(child: AudioNotesApp()));
 }

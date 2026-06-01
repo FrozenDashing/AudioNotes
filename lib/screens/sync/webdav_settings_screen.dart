@@ -261,15 +261,6 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
               accentColor: theme.colorScheme.secondary,
               title: context.tr('settings.sync.syncSettings'),
               children: [
-                // Auto sync switch
-                SwitchListTile(
-                  title: Text(context.tr('settings.sync.autoSync')),
-                  subtitle: Text(context.tr('settings.sync.autoSyncSubtitle')),
-                  value: syncState.autoSync,
-                  onChanged: (v) =>
-                      ref.read(syncProvider.notifier).setAutoSync(v),
-                ),
-
                 // Sync on startup
                 SwitchListTile(
                   title: Text(context.tr('settings.sync.syncOnStartup')),
@@ -293,9 +284,10 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
 
                 // Sync interval — tap to show bottom sheet picker
                 ListTile(
-                  title: Text(context.tr('settings.sync.interval')),
-                  subtitle: Text(
-                      '${syncState.syncIntervalMinutes} ${context.tr('settings.sync.minutes')}'),
+                  title: Text(context.tr('settings.sync.backgroundCycle')),
+                  subtitle: Text(syncState.syncIntervalMinutes <= 0
+                      ? context.tr('settings.sync.never')
+                      : '${syncState.syncIntervalMinutes} ${context.tr('settings.sync.minutes')}'),
                   trailing: Icon(Icons.chevron_right,
                       color: theme.colorScheme.onSurfaceVariant),
                   onTap: () => _showIntervalPicker(
@@ -389,7 +381,7 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
       remoteDir: _remoteDirController.text.trim().isNotEmpty
           ? _remoteDirController.text.trim()
           : '/audionotes',
-      autoSync: syncState.autoSync,
+      autoSync: syncState.syncIntervalMinutes > 0,
       syncIntervalMinutes: syncState.syncIntervalMinutes,
       conflictStrategy: syncState.conflictStrategy,
       syncOnStartup: syncState.syncOnStartup,
@@ -458,7 +450,7 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
 
   void _showIntervalPicker(BuildContext context, int currentValue) {
     final theme = Theme.of(context);
-    const intervals = [5, 15, 30, 60, 120];
+    const intervals = [0, 5, 15, 30, 60, 120];
 
     showModalBottomSheet(
       context: context,
@@ -477,7 +469,7 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
                   child: Row(
                     children: [
                       Text(
-                        context.tr('settings.sync.interval'),
+                        context.tr('settings.sync.backgroundCycle'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -492,7 +484,9 @@ class _WebDavSettingsScreenState extends ConsumerState<WebDavSettingsScreen> {
                   children: intervals.map((m) {
                     final selected = m == currentValue;
                     return ChoiceChip(
-                      label: Text('$m ${context.tr('settings.sync.minutes')}'),
+                      label: Text(m == 0
+                          ? context.tr('settings.sync.never')
+                          : '$m ${context.tr('settings.sync.minutes')}'),
                       selected: selected,
                       onSelected: (_) {
                         ref.read(syncProvider.notifier).setSyncInterval(m);

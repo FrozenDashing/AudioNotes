@@ -138,8 +138,14 @@ class SyncCoordinator {
       final remoteTags = await _remoteStore.loadTags();
       final remoteReminders = await _remoteStore.loadReminders();
 
+      // If the remote has never been initialized, ignore old local baseline
+      // records from any previous WebDAV target and treat this as a fresh sync.
+      final remoteManifest = await _remoteStore.loadManifest();
+
       // 4. Load baseline hashes from sync_records
-      final baselineHashes = await _loadBaselineHashes(db);
+      final baselineHashes = remoteManifest == null
+          ? <String, Map<String, String>>{}
+          : await _loadBaselineHashes(db);
 
       final shouldBootstrapFromRemote = _shouldBootstrapFromRemote(
         localData: localData,

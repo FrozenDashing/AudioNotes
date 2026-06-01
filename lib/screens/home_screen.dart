@@ -7,6 +7,9 @@ import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 import '../models/todo_item.dart';
 // category model no longer needed here (groups derived via providers)
+import '../sync/background/webdav_background_sync.dart';
+import '../sync/coordinator/sync_coordinator.dart';
+import '../sync/providers/sync_provider.dart';
 import '../widgets/recording_overlay.dart';
 import '../widgets/todo_group_section.dart';
 import '../widgets/floating_action_toolbar.dart';
@@ -301,7 +304,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final theme = Theme.of(context);
     final groupOrderMap = ref.watch(groupOrderMapProvider);
     final todoNotifier = ref.read(todoListProvider.notifier);
+    final syncStatus = ref.watch(syncStatusProvider);
+    final backgroundSyncStatus = ref.watch(backgroundSyncStatusProvider);
     final isSelectionMode = todoNotifier.isSelectionMode;
+    final isBackgroundSyncing = backgroundSyncStatus.maybeWhen(
+      data: (state) => state.phase == BackgroundSyncPhase.syncing,
+      orElse: () => false,
+    );
+    final isSyncing = syncStatus == SyncStatus.syncing || isBackgroundSyncing;
     final todos = ref.watch(todoListProvider).maybeWhen(
           data: (items) => items,
           orElse: () => const <TodoItem>[],
@@ -401,6 +411,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
         actions: [
+          if (isSyncing)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: Tooltip(
+                message: context.tr('settings.sync.backgroundSyncing'),
+                child: const Icon(
+                  Icons.cloud_sync_rounded,
+                ),
+              ),
+            ),
           if (isSelectionMode)
             IconButton(
               icon: const Icon(Icons.close),

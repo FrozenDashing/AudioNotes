@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
+import '../background/webdav_background_sync.dart';
 import '../client/webdav_client_wrapper.dart';
 import '../coordinator/sync_coordinator.dart';
 import '../planner/sync_planner.dart';
@@ -27,18 +28,34 @@ final syncCoordinatorProvider = Provider<SyncCoordinator>((ref) {
 class SyncNotifier extends Notifier<SyncState> {
   late final SyncCoordinator _coordinator;
   late final WebDavSettingsService _settingsService;
-  Timer? _periodicTimer;
+  late final BackgroundSyncService _backgroundSyncService;
 
   @override
   SyncState build() {
     _coordinator = ref.read(syncCoordinatorProvider);
     _settingsService = ref.read(webdavSettingsServiceProvider);
+    _backgroundSyncService = ref.read(backgroundSyncServiceProvider);
+    unawaited(_backgroundSyncService.initialize());
     // Load saved config on init
     unawaited(_loadConfig());
-    ref.onDispose(() {
-      _periodicTimer?.cancel();
-    });
     return SyncState.initial();
+  }
+
+  WebDavConfig _normalizeConfig(WebDavConfig config) {
+    if (config.syncIntervalMinutes <= 0) {
+      return config.copyWith(autoSync: false, syncIntervalMinutes: 0);
+    }
+    return config.copyWith(autoSync: true);
+  }
+
+  Future<void> _applyBackgroundSchedule(WebDavConfig config) async {
+    if (config.syncIntervalMinutes > 0) {
+      await _backgroundSyncService.schedulePeriodicSync(
+        config.syncIntervalMinutes,
+      );
+    } else {
+      await _backgroundSyncService.cancelPeriodicSync();
+    }
   }
 
   /// Load saved WebDAV config and apply to coordinator
@@ -46,27 +63,26 @@ class SyncNotifier extends Notifier<SyncState> {
     try {
       final config = await _settingsService.loadConfig();
       if (config.isConfigured) {
+        final normalized = _normalizeConfig(config);
         _coordinator.configure(
-          baseUrl: config.baseUrl,
-          username: config.username,
-          password: config.password,
-          remoteDir: config.remoteDir,
+          baseUrl: normalized.baseUrl,
+          username: normalized.username,
+          password: normalized.password,
+          remoteDir: normalized.remoteDir,
         );
-        _coordinator.setConflictStrategy(config.conflictStrategy);
+        _coordinator.setConflictStrategy(normalized.conflictStrategy);
         state = state.copyWith(
           isConfigured: true,
-          autoSync: config.autoSync,
-          syncIntervalMinutes: config.syncIntervalMinutes,
-          conflictStrategy: config.conflictStrategy,
-          syncOnStartup: config.syncOnStartup,
+          autoSync: normalized.syncIntervalMinutes > 0,
+          syncIntervalMinutes: normalized.syncIntervalMinutes,
+          conflictStrategy: normalized.conflictStrategy,
+          syncOnStartup: normalized.syncOnStartup,
         );
 
-        if (config.syncOnStartup) {
-          unawaited(syncNow());
-        }
+        await _applyBackgroundSchedule(normalized);
 
-        if (config.autoSync) {
-          _startPeriodicSync(config.syncIntervalMinutes);
+        if (normalized.syncOnStartup) {
+          unawaited(syncNow());
         }
       }
     } catch (e) {
@@ -77,28 +93,25 @@ class SyncNotifier extends Notifier<SyncState> {
   /// Configure WebDAV connection
   Future<bool> configureAndSave(WebDavConfig config) async {
     try {
-      await _settingsService.saveConfig(config);
+      final normalized = _normalizeConfig(config);
+      await _settingsService.saveConfig(normalized);
       _coordinator.configure(
-        baseUrl: config.baseUrl,
-        username: config.username,
-        password: config.password,
-        remoteDir: config.remoteDir,
+        baseUrl: normalized.baseUrl,
+        username: normalized.username,
+        password: normalized.password,
+        remoteDir: normalized.remoteDir,
       );
-      _coordinator.setConflictStrategy(config.conflictStrategy);
+      _coordinator.setConflictStrategy(normalized.conflictStrategy);
 
       state = state.copyWith(
         isConfigured: true,
-        autoSync: config.autoSync,
-        syncIntervalMinutes: config.syncIntervalMinutes,
-        conflictStrategy: config.conflictStrategy,
-        syncOnStartup: config.syncOnStartup,
+        autoSync: normalized.syncIntervalMinutes > 0,
+        syncIntervalMinutes: normalized.syncIntervalMinutes,
+        conflictStrategy: normalized.conflictStrategy,
+        syncOnStartup: normalized.syncOnStartup,
       );
 
-      if (config.autoSync) {
-        _startPeriodicSync(config.syncIntervalMinutes);
-      } else {
-        _periodicTimer?.cancel();
-      }
+      await _applyBackgroundSchedule(normalized);
 
       return true;
     } catch (e) {
@@ -124,6 +137,7 @@ class SyncNotifier extends Notifier<SyncState> {
   /// Execute a manual sync
   Future<SyncResult> syncNow() async {
     state = state.copyWith(status: SyncStatus.syncing, errorMessage: null);
+    await _backgroundSyncService.markSyncing(message: 'foreground sync');
 
     final result = await _coordinator.syncNow();
 
@@ -137,6 +151,11 @@ class SyncNotifier extends Notifier<SyncState> {
       ref.read(todoTagsCacheNotifierProvider.notifier).invalidate();
     }
 
+    await _backgroundSyncService.markFinished(
+      success: result.success,
+      message: result.errorMessage,
+    );
+
     state = state.copyWith(
       status: _coordinator.status,
       lastSyncTime: _coordinator.lastSyncTime,
@@ -149,9 +168,10 @@ class SyncNotifier extends Notifier<SyncState> {
 
   /// Disconnect and clear WebDAV config
   Future<void> disconnect() async {
-    _periodicTimer?.cancel();
+    await _backgroundSyncService.cancelPeriodicSync();
     await _settingsService.clearConfig();
     _coordinator.reset();
+    await _backgroundSyncService.markIdle();
 
     state = SyncState.initial();
   }
@@ -168,37 +188,43 @@ class SyncNotifier extends Notifier<SyncState> {
 
   /// Toggle auto sync
   Future<void> setAutoSync(bool enabled) async {
-    state = state.copyWith(autoSync: enabled);
+    if (!enabled) {
+      await setSyncInterval(0);
+      return;
+    }
+
+    final nextInterval = enabled && state.syncIntervalMinutes <= 0
+        ? 30
+        : state.syncIntervalMinutes;
+    state = state.copyWith(
+      autoSync: enabled,
+      syncIntervalMinutes: nextInterval,
+    );
 
     final config = await _settingsService.loadConfig();
-    await _settingsService.saveConfig(config.copyWith(autoSync: enabled));
-
-    if (enabled) {
-      _startPeriodicSync(state.syncIntervalMinutes);
-    } else {
-      _periodicTimer?.cancel();
-    }
+    final updatedConfig = config.copyWith(
+      autoSync: enabled,
+      syncIntervalMinutes: nextInterval,
+    );
+    await _settingsService.saveConfig(updatedConfig);
+    await _applyBackgroundSchedule(updatedConfig);
   }
 
   /// Set sync interval
   Future<void> setSyncInterval(int minutes) async {
-    state = state.copyWith(syncIntervalMinutes: minutes);
+    final isNever = minutes <= 0;
+    state = state.copyWith(
+      syncIntervalMinutes: minutes,
+      autoSync: !isNever,
+    );
 
     final config = await _settingsService.loadConfig();
-    await _settingsService
-        .saveConfig(config.copyWith(syncIntervalMinutes: minutes));
-
-    if (state.autoSync) {
-      _startPeriodicSync(minutes);
-    }
-  }
-
-  /// Start periodic sync timer
-  void _startPeriodicSync(int minutes) {
-    _periodicTimer?.cancel();
-    _periodicTimer = Timer.periodic(Duration(minutes: minutes), (_) {
-      syncNow();
-    });
+    final updatedConfig = config.copyWith(
+      syncIntervalMinutes: minutes,
+      autoSync: !isNever,
+    );
+    await _settingsService.saveConfig(updatedConfig);
+    await _applyBackgroundSchedule(updatedConfig);
   }
 }
 

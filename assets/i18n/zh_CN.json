@@ -151,8 +151,10 @@
       "autoSyncSubtitle": "定期将数据同步到云端",
       "syncOnStartup": "启动时同步",
       "syncOnStartupSubtitle": "应用启动时自动同步",
-      "interval": "同步间隔",
+      "backgroundCycle": "后台自动同步周期",
+      "never": "从不",
       "minutes": "分钟",
+      "backgroundSyncing": "正在云同步",
       "conflictStrategy": "冲突策略",
       "conflict": {
         "localWins": "本地优先",

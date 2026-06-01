@@ -151,8 +151,10 @@
       "autoSyncSubtitle": "Periodically sync data with the cloud",
       "syncOnStartup": "Sync on Startup",
       "syncOnStartupSubtitle": "Automatically sync when app starts",
-      "interval": "Sync Interval",
+      "backgroundCycle": "Background auto-sync cycle",
+      "never": "Never",
       "minutes": "min",
+      "backgroundSyncing": "Cloud sync in progress",
       "conflictStrategy": "Conflict Strategy",
       "conflict": {
         "localWins": "Local wins",
