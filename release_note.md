@@ -1,6 +1,27 @@
 # AudioNotes Release Notes
 
-## Version 3.2.8 (2026-05-31)
+## Version 3.8.8 (2026-06-14)
+
+### 🔧 技术改进
+
+#### 通知引擎迁移：awesome_notifications → flutter_local_notifications
+- **替换底层通知插件**：将 `awesome_notifications` 替换为 `flutter_local_notifications` + `android_alarm_manager_plus`，修复应用在后台/被杀死状态时无法发送通知的问题
+- **AndroidManifest 补全**：添加 `ScheduledNotificationReceiver`、`RefreshSchedulesReceiver`（BOOT_COMPLETED 重调度）和必要权限（`VIBRATE`、`POST_NOTIFICATIONS`）
+- **通知 fired 状态追踪**：通过 `SharedPreferences` 记录已触发的通知 ID，避免每次启动时重新调度过期提醒
+- **背景回调入口**：添加顶级函数 `onBackgroundNotificationResponse`，满足 `flutter_local_notifications` 对后台 isolate 回调必须是静态/顶层函数的要求
+
+### 🐛 问题修复
+
+- **选中模式下工具栏不显示**：`FloatingActionToolbar` 因 `const` 关键字阻止了 widget 重建，配合 `ref.read`（非响应式读取），导致 `isSelectionMode` 变化后工具栏仍返回 `SizedBox.shrink()`。移除 `const` 后每次父级重建时读取最新状态。
+
+### 📦 依赖更新
+
+| 变更 | 包 | 版本 |
+|------|---|------|
+| 移除 | `awesome_notifications` | ^0.11.0 |
+| 新增 | `android_alarm_manager_plus` | ^5.0.0 |
+
+---
 
 ### 🎉 新功能
 
