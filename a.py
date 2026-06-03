@@ -1,0 +1,1 @@
+import superlocalmemory.core.embedding_worker as ew; print(ew.__file__)

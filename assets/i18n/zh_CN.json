@@ -44,7 +44,8 @@
       "calendar": "日历同步",
       "permissionHint": "开启本地通知需要通知权限",
       "permissionGranted": "通知权限已开启",
-      "permissionDenied": "需要通知权限才能使用本地提醒"
+      "permissionDenied": "需要通知权限才能使用本地提醒",
+      "permissionRequired": "需要开启通知和精确闹钟权限才能使用本地通知"
     },
     "appearance": {
       "themeColor": "主题色",
@@ -156,6 +157,7 @@
       "minutes": "分钟",
       "backgroundSyncing": "正在云同步",
       "conflictStrategy": "冲突策略",
+      "permissionRequired": "需要开启通知和精确闹钟权限才能使用本地通知",
       "conflict": {
         "localWins": "本地优先",
         "remoteWins": "远端优先",
@@ -257,6 +259,7 @@
   },
   "toolbar": {
     "clearCompletedTooltip": "清除所有已完成待办",
+    "groupSelectedTooltip": "将选中待办加入分类",
     "completeSelectedTooltip": "完成选中的待办",
     "deleteSelectedTooltip": "删除选中的待办",
     "clearCompletedTitle": "清除已完成待办",
@@ -266,7 +269,8 @@
     "completedCount": "已完成 {count} 个待办",
     "deleteSelectedTitle": "删除选中待办",
     "deleteSelectedContent": "确定要删除选中的 {count} 个待办吗？此操作不可恢复。",
-    "deletedCount": "已删除 {count} 个待办"
+    "deletedCount": "已删除 {count} 个待办",
+    "groupedCount": "已将 {count} 个待办分组"
   },
   "group": {
     "noteCount": "{count} 条笔记",

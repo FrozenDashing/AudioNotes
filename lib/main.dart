@@ -7,19 +7,28 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
+
 import 'l10n/app_i18n.dart';
 import 'sync/background/webdav_background_sync.dart';
 import 'screens/home_screen.dart';
 import 'models/settings_state.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
-import 'services/awesome_notification_service.dart';
+import 'services/local_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final notificationService = AwesomeNotificationService();
-  await notificationService.initialize();
+  // Initialize timezone database (required by flutter_local_notifications)
+  tz.initializeTimeZones();
+  final String timeZoneName =
+      await FlutterTimezone.getLocalTimezone().then((v) => v.identifier);
+  tz.setLocalLocation(tz.getLocation(timeZoneName));
+
+  await localNotificationService.initialize();
   await initializeWebDavBackgroundSync();
 
   runApp(const ProviderScope(child: AudioNotesApp()));

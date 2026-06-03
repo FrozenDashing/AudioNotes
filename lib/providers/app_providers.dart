@@ -9,7 +9,7 @@ import '../services/recorder_service.dart';
 import '../services/recognition_service.dart';
 import '../services/audio_playback_service.dart';
 import '../services/model_manager_service.dart';
-import '../services/awesome_notification_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/reminder_service.dart';
 import '../services/calendar_sync_service.dart';
 import '../services/todo_grouping_service.dart';
@@ -123,9 +123,9 @@ class TodoTagsCacheNotifier extends Notifier<Map<String, List<Tag>>> {
   List<Tag>? get(String todoId) => state[todoId];
 }
 
-/// Provider for awesome notification service
-final notificationServiceProvider = Provider<AwesomeNotificationService>((ref) {
-  return AwesomeNotificationService();
+/// Provider for local notification service
+final notificationServiceProvider = Provider<LocalNotificationService>((ref) {
+  return localNotificationService;
 });
 
 /// Provider for calendar sync service
@@ -850,6 +850,19 @@ class TodoListNotifier extends AsyncNotifier<List<TodoItem>> {
       }
       await setCompletionStatus(id, TodoStatus.completed);
     }
+    _selectedIds.clear();
+    await loadTodos();
+  }
+
+  /// Move selected todos to a category (batch group)
+  Future<void> moveSelectedToCategory(String? targetCategoryId) async {
+    final ids = _selectedIds.toList(growable: false);
+    if (ids.isEmpty) return;
+
+    for (final id in ids) {
+      await updateCategory(id, targetCategoryId);
+    }
+
     _selectedIds.clear();
     await loadTodos();
   }

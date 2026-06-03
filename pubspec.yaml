@@ -48,7 +48,10 @@ dependencies:
   
   # Equatable for model comparison
   equatable: ^2.0.5
+
+  # Notification
   flutter_local_notifications: ^21.0.0
+  android_alarm_manager_plus: ^5.0.0
   timezone: ^0.11.0
   flutter_timezone: ^5.0.2
   flutter_i18n: ^0.36.2
@@ -56,9 +59,6 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   crypto: ^3.0.7
   storage_utility: ^1.0.0
-  
-  # Notification
-  awesome_notifications: ^0.11.0
   
   # Calendar integration
   device_calendar_plus: ^0.4.0

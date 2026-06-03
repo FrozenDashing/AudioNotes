@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' as foundation;
 
 import '../data/reminder_repository.dart';
@@ -5,22 +7,23 @@ import '../data/todo_repository.dart';
 import '../models/notification_mode.dart';
 import '../models/todo_item.dart';
 import '../repositories/settings_repository.dart';
-import 'awesome_notification_service.dart';
 import 'calendar_sync_service.dart';
+import 'local_notification_service.dart';
+import 'notification_controller.dart';
 
 class ReminderService {
   final ReminderRepository _reminderRepository;
   final TodoRepository _todoRepository;
   final SettingsRepository _settingsRepository;
   final CalendarSyncService _calendarSyncService;
-  final AwesomeNotificationService _notificationService;
+  final LocalNotificationService _notificationService;
 
   ReminderService({
     required ReminderRepository reminderRepository,
     required TodoRepository todoRepository,
     required SettingsRepository settingsRepository,
     required CalendarSyncService calendarSyncService,
-    required AwesomeNotificationService notificationService,
+    required LocalNotificationService notificationService,
   })  : _reminderRepository = reminderRepository,
         _todoRepository = todoRepository,
         _settingsRepository = settingsRepository,
@@ -30,8 +33,7 @@ class ReminderService {
   NotificationMode _notificationMode = NotificationMode.none;
 
   bool get _usesLocalNotifications =>
-      _notificationMode == NotificationMode.local ||
-      _notificationMode == NotificationMode.awesome;
+      _notificationMode == NotificationMode.local;
 
   Future<void> initialize() async {
     await _notificationService.initialize();
@@ -55,9 +57,7 @@ class ReminderService {
     }
 
     final granted = await _notificationService.requestNotificationPermission();
-    if (!granted &&
-        (_notificationMode == NotificationMode.local ||
-            _notificationMode == NotificationMode.awesome)) {
+    if (!granted && _notificationMode == NotificationMode.local) {
       await setNotificationMode(NotificationMode.none);
     }
   }
@@ -99,9 +99,9 @@ class ReminderService {
         }
 
         await _cancelCalendarReminder(todo);
-        await _scheduleAwesomeNotification(todo);
+        await _scheduleLocalNotification(todo);
       } else {
-        await _cancelAwesomeNotification(todo);
+        await _cancelLocalNotification(todo);
         await _cancelCalendarReminder(todo);
         await _syncTodoWithCalendar(todo);
       }
@@ -109,6 +109,13 @@ class ReminderService {
   }
 
   Future<void> syncPendingReminders() async {
+    // Consume externally-recorded fired notifications
+    final firedTodoIds = await NotificationFiredTracker.consumeFired();
+    for (final todoId in firedTodoIds) {
+      await markReminderFired(todoId);
+    }
+
+    final now = DateTime.now();
     final reminders = await _reminderRepository.getAllReminders();
     for (final reminder in reminders) {
       final todoId = reminder['todo_id'] as String?;
@@ -132,8 +139,14 @@ class ReminderService {
         continue;
       }
 
+      // Heuristic: if remindAt is in the past, treat as already fired
+      if (todo.remindAt!.isBefore(now)) {
+        await markReminderFired(todoId);
+        continue;
+      }
+
       if (_usesLocalNotifications) {
-        await _scheduleAwesomeNotification(todo);
+        await _scheduleLocalNotification(todo);
       } else {
         await _syncTodoWithCalendar(todo);
       }
@@ -153,7 +166,7 @@ class ReminderService {
       }
 
       await _cancelCalendarReminder(todo);
-      await _scheduleAwesomeNotification(todo);
+      await _scheduleLocalNotification(todo);
       return;
     }
 
@@ -162,7 +175,7 @@ class ReminderService {
       return;
     }
 
-    await _cancelAwesomeNotification(todo);
+    await _cancelLocalNotification(todo);
     await _syncTodoWithCalendar(todo);
   }
 
@@ -181,9 +194,9 @@ class ReminderService {
     await _reminderRepository.deleteReminderByTodoId(todoId);
   }
 
-  Future<void> _scheduleAwesomeNotification(TodoItem todo) async {
+  Future<void> _scheduleLocalNotification(TodoItem todo) async {
     try {
-      await _notificationService.createTodoNotification(todo);
+      await _notificationService.scheduleTodoNotification(todo);
       final notificationId =
           _notificationService.getNotificationIdForTodo(todo.id);
       await _reminderRepository.upsertReminder(
@@ -201,11 +214,11 @@ class ReminderService {
       );
       await _todoRepository.updateTodo(updatedTodo);
     } catch (error) {
-      foundation.debugPrint('Failed to schedule awesome notification: $error');
+      foundation.debugPrint('Failed to schedule local notification: $error');
     }
   }
 
-  Future<void> _cancelAwesomeNotification(TodoItem todo) async {
+  Future<void> _cancelLocalNotification(TodoItem todo) async {
     try {
       await _notificationService.cancelTodoNotification(todo.id);
 
@@ -216,7 +229,7 @@ class ReminderService {
       );
       await _todoRepository.updateTodo(updatedTodo);
     } catch (error) {
-      foundation.debugPrint('Failed to cancel awesome notification: $error');
+      foundation.debugPrint('Failed to cancel local notification: $error');
     }
   }
 
@@ -256,6 +269,54 @@ class ReminderService {
     final notificationId = existing?['notification_id'] as int?;
     if (notificationId != null) {
       await _reminderRepository.markReminderFired(notificationId);
+    }
+  }
+
+  /// Re-schedule all pending (unfired, future-dated) local notifications.
+  ///
+  /// Safe to call from a background isolate (e.g. WorkManager) because it
+  /// constructs its own dependencies without Riverpod.
+  Future<void> rescheduleAllPendingReminders() async {
+    await _loadNotificationMode();
+    if (!_usesLocalNotifications) {
+      return;
+    }
+
+    final firedTodoIds = await NotificationFiredTracker.consumeFired();
+    for (final todoId in firedTodoIds) {
+      await markReminderFired(todoId);
+    }
+
+    final now = DateTime.now();
+    final reminders = await _reminderRepository.getAllReminders();
+    for (final reminder in reminders) {
+      final todoId = reminder['todo_id'] as String?;
+      final fired = (reminder['fired'] as int? ?? 0) == 1;
+      if (todoId == null || fired) {
+        continue;
+      }
+
+      final todo = await _todoRepository.getTodoById(todoId);
+      if (todo == null ||
+          todo.remindAt == null ||
+          todo.status == TodoStatus.completed ||
+          todo.deletedAt != null) {
+        await clearReminder(todoId);
+        continue;
+      }
+
+      if (todo.remindAt!.isBefore(now)) {
+        await markReminderFired(todoId);
+        continue;
+      }
+
+      try {
+        await _notificationService.scheduleTodoNotification(todo);
+      } catch (error) {
+        foundation.debugPrint(
+          'Failed to reschedule notification for ${todo.id}: $error',
+        );
+      }
     }
   }
 }

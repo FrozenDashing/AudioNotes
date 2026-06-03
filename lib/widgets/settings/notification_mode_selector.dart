@@ -152,6 +152,15 @@ class _NotificationModeSelectorState
       if (mode == NotificationMode.local) {
         final granted = await _ensureLocalNotificationPermission();
         if (!granted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  context.tr('settings.notification.permissionDenied'),
+                ),
+              ),
+            );
+          }
           await ref.read(settingsProvider.notifier).setNotificationMode(
                 NotificationMode.none,
               );
@@ -223,8 +232,6 @@ class _NotificationModeSelectorState
       NotificationMode.local =>
         '${context.tr('settings.notification.local')}（默认）',
       NotificationMode.calendar => context.tr('settings.notification.calendar'),
-      NotificationMode.awesome =>
-        '${context.tr('settings.notification.local')}（默认）',
     };
   }
 }

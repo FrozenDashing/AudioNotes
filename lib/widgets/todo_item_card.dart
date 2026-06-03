@@ -4,11 +4,11 @@ import '../l10n/app_i18n.dart';
 import '../models/tag.dart';
 import '../models/todo_item.dart';
 import '../models/todo_priority.dart';
-import '../utils/priority_color.dart';
 import '../providers/app_providers.dart';
 import '../screens/category_picker_screen.dart';
 import '../screens/tag_picker_screen.dart';
 import '../utils/motion.dart';
+import 'completed_text.dart';
 
 enum _TodoCardLayoutMode {
   compact,
@@ -75,7 +75,13 @@ class TodoItemCard extends ConsumerWidget {
           )
         : card;
 
-    return visualCard;
+    return motionEntrance(
+      context,
+      visualCard,
+      duration: isRecognizing ? MotionTokens.medium : MotionTokens.page,
+      slideY: isRecognizing ? 0.02 : 0.04,
+      includeScale: !isRecognizing && !subdued,
+    );
   }
 
   Widget _buildCard(
@@ -288,8 +294,8 @@ class TodoItemCard extends ConsumerWidget {
     WidgetRef ref,
   ) {
     return AnimatedSize(
-      duration: isCompleted ? MotionTokens.micro : MotionTokens.short,
-      curve: Curves.easeInOutCubic,
+      duration: MotionTokens.medium,
+      curve: Curves.easeOutCubic,
       alignment: Alignment.topLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,34 +312,73 @@ class TodoItemCard extends ConsumerWidget {
             2,
             loweredTitle: true,
           ),
-          _buildAnimatedVisibility(
-            visible: !isCompleted,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: _buildMetaRow(
-                context,
-                customTags: tags,
-                priority: todo.priority,
-                priorityLabel: priorityLabel,
-                remindAt: todo.remindAt,
-                dueAt: todo.dueAt,
-                maxItems: 2,
-                compact: true,
-                alignment: WrapAlignment.start,
-                onPriorityTap: isSelectionMode
-                    ? null
-                    : () => _showPriorityPicker(context, notifier, todo),
-                onReminderTap: isSelectionMode
-                    ? null
-                    : () => _pickReminderTime(context, notifier, todo),
-                onDueTap: isSelectionMode
-                    ? null
-                    : () => _pickDueTime(context, notifier, todo),
-                onTagsTap: isSelectionMode
-                    ? null
-                    : () => _openTagPicker(context, ref, notifier, todo),
-              ),
-            ),
+          AnimatedSwitcher(
+            duration: MotionTokens.medium,
+            reverseDuration: MotionTokens.short,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                alignment: Alignment.topLeft,
+                children: [
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              );
+            },
+            transitionBuilder: (child, animation) {
+              final fade = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              );
+              final slide = Tween<Offset>(
+                begin: const Offset(-0.12, 0),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                ),
+              );
+
+              return ClipRect(
+                child: FadeTransition(
+                  opacity: fade,
+                  child: SlideTransition(
+                    position: slide,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: isCompleted
+                ? const SizedBox.shrink(key: ValueKey('compact-meta-hidden'))
+                : Padding(
+                    key: const ValueKey('compact-meta-visible'),
+                    padding: const EdgeInsets.only(top: 1),
+                    child: _buildMetaRow(
+                      context,
+                      customTags: tags,
+                      priorityLabel: priorityLabel,
+                      remindAt: todo.remindAt,
+                      dueAt: todo.dueAt,
+                      maxItems: 2,
+                      compact: true,
+                      alignment: WrapAlignment.start,
+                      onPriorityTap: isSelectionMode
+                          ? null
+                          : () => _showPriorityPicker(context, notifier, todo),
+                      onReminderTap: isSelectionMode
+                          ? null
+                          : () => _pickReminderTime(context, notifier, todo),
+                      onDueTap: isSelectionMode
+                          ? null
+                          : () => _pickDueTime(context, notifier, todo),
+                      onTagsTap: isSelectionMode
+                          ? null
+                          : () => _openTagPicker(context, ref, notifier, todo),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -354,9 +399,8 @@ class TodoItemCard extends ConsumerWidget {
     WidgetRef ref,
   ) {
     return AnimatedSize(
-      duration:
-          isCompleted ? const Duration(milliseconds: 10) : MotionTokens.short,
-      curve: Curves.easeInOutCubic,
+      duration: MotionTokens.medium,
+      curve: Curves.easeOutCubic,
       alignment: Alignment.topLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,34 +417,73 @@ class TodoItemCard extends ConsumerWidget {
             1,
             loweredTitle: true,
           ),
-          _buildAnimatedVisibility(
-            visible: !isCompleted,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: _buildMetaRow(
-                context,
-                customTags: tags,
-                priority: todo.priority,
-                priorityLabel: priorityLabel,
-                remindAt: todo.remindAt,
-                dueAt: todo.dueAt,
-                maxItems: 3,
-                compact: false,
-                alignment: WrapAlignment.start,
-                onPriorityTap: isSelectionMode
-                    ? null
-                    : () => _showPriorityPicker(context, notifier, todo),
-                onReminderTap: isSelectionMode
-                    ? null
-                    : () => _pickReminderTime(context, notifier, todo),
-                onDueTap: isSelectionMode
-                    ? null
-                    : () => _pickDueTime(context, notifier, todo),
-                onTagsTap: isSelectionMode
-                    ? null
-                    : () => _openTagPicker(context, ref, notifier, todo),
-              ),
-            ),
+          AnimatedSwitcher(
+            duration: MotionTokens.medium,
+            reverseDuration: MotionTokens.short,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                alignment: Alignment.topLeft,
+                children: [
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              );
+            },
+            transitionBuilder: (child, animation) {
+              final fade = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              );
+              final slide = Tween<Offset>(
+                begin: const Offset(-0.12, 0),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                ),
+              );
+
+              return ClipRect(
+                child: FadeTransition(
+                  opacity: fade,
+                  child: SlideTransition(
+                    position: slide,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: isCompleted
+                ? const SizedBox.shrink(key: ValueKey('standard-meta-hidden'))
+                : Padding(
+                    key: const ValueKey('standard-meta-visible'),
+                    padding: const EdgeInsets.only(top: 1),
+                    child: _buildMetaRow(
+                      context,
+                      customTags: tags,
+                      priorityLabel: priorityLabel,
+                      remindAt: todo.remindAt,
+                      dueAt: todo.dueAt,
+                      maxItems: 3,
+                      compact: false,
+                      alignment: WrapAlignment.start,
+                      onPriorityTap: isSelectionMode
+                          ? null
+                          : () => _showPriorityPicker(context, notifier, todo),
+                      onReminderTap: isSelectionMode
+                          ? null
+                          : () => _pickReminderTime(context, notifier, todo),
+                      onDueTap: isSelectionMode
+                          ? null
+                          : () => _pickDueTime(context, notifier, todo),
+                      onTagsTap: isSelectionMode
+                          ? null
+                          : () => _openTagPicker(context, ref, notifier, todo),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -443,7 +526,6 @@ class TodoItemCard extends ConsumerWidget {
           child: _buildInlineMetaRow(
             context,
             customTags: tags,
-            priority: todo.priority,
             priorityLabel: priorityLabel,
             remindAt: todo.remindAt,
             dueAt: todo.dueAt,
@@ -508,44 +590,41 @@ class TodoItemCard extends ConsumerWidget {
   Widget _buildTitleBlock(BuildContext context, ThemeData theme, TodoItem todo,
       String displayText, bool isCompleted, bool isRecognizing, int maxLines,
       {bool loweredTitle = false}) {
-    final measurementStyle = TextStyle(
+    final titleStyle = TextStyle(
       fontSize: 19,
       height: 1.05,
-      fontWeight: FontWeight.w600,
-      color: theme.colorScheme.onSurface,
+      fontWeight: isCompleted ? FontWeight.w500 : FontWeight.w600,
+      color: isCompleted
+          ? theme.colorScheme.onSurfaceVariant
+          : theme.colorScheme.onSurface,
     );
 
-    final titleStyle = isCompleted
-        ? measurementStyle.copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.78),
+    final titleWidget = isCompleted
+        ? CompletedText(
+            text: displayText,
+            style: titleStyle,
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
           )
-        : measurementStyle;
-
-    final titleWidget = AnimatedDefaultTextStyle(
-      duration: MotionTokens.short,
-      curve: Curves.easeInOutCubic,
-      style: titleStyle,
-      child: Text(
-        displayText,
-        maxLines: maxLines,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+        : Text(
+            displayText,
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: titleStyle,
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final displayedLineCount = _displayedLineCount(
           displayText,
-          measurementStyle,
+          titleStyle,
           constraints.maxWidth,
           maxLines,
           context,
         );
         final fitsOnSingleLine = _fitsOnSingleLine(
           displayText,
-          measurementStyle,
+          titleStyle,
           constraints.maxWidth,
           context,
         );
@@ -718,7 +797,6 @@ class TodoItemCard extends ConsumerWidget {
   Widget _buildMetaRow(
     BuildContext context, {
     required List<Tag> customTags,
-    required TodoPriority priority,
     required String? priorityLabel,
     required DateTime? remindAt,
     required DateTime? dueAt,
@@ -759,7 +837,7 @@ class TodoItemCard extends ConsumerWidget {
           addChip(
             icon: Icons.flag_outlined,
             label: priorityLabel,
-            color: resolvePriorityColor(context, priority),
+            color: theme.colorScheme.outline,
             onTap: onPriorityTap,
           );
         }
@@ -844,63 +922,9 @@ class TodoItemCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildAnimatedVisibility({
-    required bool visible,
-    required Widget child,
-  }) {
-    return AnimatedSwitcher(
-      duration: MotionTokens.short,
-      reverseDuration: MotionTokens.short,
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      layoutBuilder: (currentChild, previousChildren) {
-        return Stack(
-          alignment: Alignment.topLeft,
-          children: [
-            ...previousChildren,
-            if (currentChild != null) currentChild,
-          ],
-        );
-      },
-      transitionBuilder: (child, animation) {
-        final fade = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        );
-        final scale = Tween<double>(
-          begin: 0.985,
-          end: 1.0,
-        ).animate(
-          CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-        return ClipRect(
-          child: FadeTransition(
-            opacity: fade,
-            child: ScaleTransition(
-              scale: scale,
-              alignment: Alignment.topLeft,
-              child: child,
-            ),
-          ),
-        );
-      },
-      child: visible
-          ? KeyedSubtree(
-              key: const ValueKey('meta-visible'),
-              child: child,
-            )
-          : const SizedBox.shrink(key: ValueKey('meta-hidden')),
-    );
-  }
-
   Widget _buildInlineMetaRow(
     BuildContext context, {
     required List<Tag> customTags,
-    required TodoPriority priority,
     required String? priorityLabel,
     required DateTime? remindAt,
     required DateTime? dueAt,
@@ -920,7 +944,7 @@ class TodoItemCard extends ConsumerWidget {
           context,
           icon: Icons.flag_outlined,
           label: priorityLabel,
-          color: resolvePriorityColor(context, priority),
+          color: theme.colorScheme.outline,
           compact: compact,
           onTap: onPriorityTap,
         ),

@@ -1,36 +1,43 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 
-/// Controller for handling notification callbacks.
-class NotificationController {
-  @pragma('vm:entry-point')
-  static Future<void> onActionReceivedMethod(
-    ReceivedAction receivedAction,
-  ) async {
-    final todoId = receivedAction.payload?['todoId'];
-    if (todoId != null) {
-      debugPrint('Notification tapped for todo: $todoId');
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Lightweight tracker for notification fired status.
+///
+/// Usable from any isolate (main, WorkManager, android_alarm_manager_plus).
+class NotificationFiredTracker {
+  static const String _firedPrefix = 'notification.fired.';
+
+  /// Record that a notification was displayed for the given todo.
+  static Future<void> recordFired(String todoId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('$_firedPrefix$todoId', true);
+    } catch (e) {
+      debugPrint('Failed to record fired notification: $e');
     }
   }
 
-  @pragma('vm:entry-point')
-  static Future<void> onNotificationCreatedMethod(
-    ReceivedNotification receivedNotification,
-  ) async {
-    debugPrint('Notification created: ${receivedNotification.id}');
-  }
-
-  @pragma('vm:entry-point')
-  static Future<void> onNotificationDisplayedMethod(
-    ReceivedNotification receivedNotification,
-  ) async {
-    debugPrint('Notification displayed: ${receivedNotification.id}');
-  }
-
-  @pragma('vm:entry-point')
-  static Future<void> onDismissActionReceivedMethod(
-    ReceivedAction receivedAction,
-  ) async {
-    debugPrint('Notification dismissed: ${receivedAction.id}');
+  /// Consume and return the set of todo IDs whose notifications have fired
+  /// since the last call. The keys are removed from SharedPreferences.
+  static Future<Set<String>> consumeFired() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final firedIds = <String>{};
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith(_firedPrefix)) {
+          final todoId = key.substring(_firedPrefix.length);
+          if (prefs.getBool(key) == true) {
+            firedIds.add(todoId);
+          }
+          await prefs.remove(key);
+        }
+      }
+      return firedIds;
+    } catch (e) {
+      debugPrint('Failed to consume fired notifications: $e');
+      return {};
+    }
   }
 }

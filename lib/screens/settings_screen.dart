@@ -167,8 +167,6 @@ class SettingsScreen extends ConsumerWidget {
       NotificationMode.local =>
         '${context.tr('settings.notification.local')}（默认）',
       NotificationMode.calendar => context.tr('settings.notification.calendar'),
-      NotificationMode.awesome =>
-        '${context.tr('settings.notification.local')}（默认）',
     };
   }
 

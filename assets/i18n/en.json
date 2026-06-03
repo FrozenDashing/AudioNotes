@@ -44,7 +44,8 @@
       "calendar": "Calendar sync",
       "permissionHint": "Local reminders require notification permission",
       "permissionGranted": "Notification permission is enabled",
-      "permissionDenied": "Notification permission is required for local reminders"
+      "permissionDenied": "Notification permission is required for local reminders",
+      "permissionRequired": "Notifications and exact alarm permission are required for local notifications"
     },
     "appearance": {
       "themeColor": "Theme Color",
@@ -156,6 +157,7 @@
       "minutes": "min",
       "backgroundSyncing": "Cloud sync in progress",
       "conflictStrategy": "Conflict Strategy",
+      "permissionRequired": "Notifications and exact alarm permission are required for local notifications",
       "conflict": {
         "localWins": "Local wins",
         "remoteWins": "Remote wins",
@@ -257,6 +259,7 @@
   },
   "toolbar": {
     "clearCompletedTooltip": "Clear all completed todos",
+    "groupSelectedTooltip": "Group selected todos",
     "completeSelectedTooltip": "Complete selected todos",
     "deleteSelectedTooltip": "Delete selected todos",
     "clearCompletedTitle": "Clear completed todos",
@@ -266,7 +269,8 @@
     "completedCount": "Completed {count} todos",
     "deleteSelectedTitle": "Delete selected todos",
     "deleteSelectedContent": "Delete {count} selected todos? This cannot be undone.",
-    "deletedCount": "Deleted {count} todos"
+    "deletedCount": "Deleted {count} todos",
+    "groupedCount": "Grouped {count} todos"
   },
   "group": {
     "noteCount": "{count} notes",

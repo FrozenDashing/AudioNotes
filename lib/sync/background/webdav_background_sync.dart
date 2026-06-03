@@ -1,15 +1,26 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../data/reminder_repository.dart';
+import '../../data/todo_repository.dart';
+import '../../repositories/settings_repository.dart';
+import '../../services/local_notification_service.dart';
+import '../../services/calendar_sync_service.dart';
+import '../../services/reminder_service.dart';
 import '../client/webdav_client_wrapper.dart';
 import '../coordinator/sync_coordinator.dart';
 import '../providers/webdav_settings_service.dart';
 
 const String _backgroundSyncTaskName = 'webdav_background_sync';
 const String _backgroundSyncUniqueName = 'webdav_background_sync_periodic';
+
+// Reminder rescheduling task (safety net for lost alarms)
+const String _reminderRescheduleTaskName = 'reminder_reschedule';
+const String _reminderRescheduleUniqueName = 'reminder_reschedule_periodic';
 const String _backgroundSyncStateKey = 'webdav_background_sync_state';
 const String _backgroundSyncMessageKey = 'webdav_background_sync_message';
 const String _backgroundSyncUpdatedAtKey = 'webdav_background_sync_updated_at';
@@ -118,6 +129,8 @@ class BackgroundSyncService {
     }
 
     await Workmanager().initialize(callbackDispatcher);
+    // Register the periodic reminder reschedule as a safety net.
+    await _scheduleReminderReschedule();
 
     _initialized = true;
   }
@@ -145,6 +158,30 @@ class BackgroundSyncService {
     await Workmanager().cancelByUniqueName(_backgroundSyncUniqueName);
   }
 
+  // ---------------------------------------------------------------------------
+  // Reminder reschedule safety net
+  // ---------------------------------------------------------------------------
+
+  /// Schedule a periodic task that re-schedules all pending notifications.
+  /// This acts as a safety net when alarms are lost (reboot, OEM kill, etc.).
+  Future<void> _scheduleReminderReschedule() async {
+    await Workmanager().registerPeriodicTask(
+      _reminderRescheduleUniqueName,
+      _reminderRescheduleTaskName,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      frequency: const Duration(minutes: 15),
+      constraints: Constraints(),
+      backoffPolicy: BackoffPolicy.exponential,
+      backoffPolicyDelay: const Duration(minutes: 5),
+      inputData: const {'mode': 'periodic'},
+    );
+  }
+
+  /// Cancel the periodic reminder reschedule task.
+  Future<void> cancelReminderReschedule() async {
+    await Workmanager().cancelByUniqueName(_reminderRescheduleUniqueName);
+  }
+
   Future<void> markSyncing({String? message}) async {
     await _statusStore.markSyncing(message: message);
   }
@@ -161,25 +198,44 @@ class BackgroundSyncService {
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    if (task != _backgroundSyncTaskName) {
-      return true;
+    if (task == _backgroundSyncTaskName) {
+      return _executeBackgroundSync();
     }
 
-    final statusStore = BackgroundSyncStatusStore();
-    await statusStore.markSyncing(message: 'background sync started');
-
-    try {
-      final result = await _runBackgroundSync();
-      await statusStore.markFinished(
-        success: result.success,
-        message: result.success ? null : result.errorMessage,
-      );
-      return result.success;
-    } catch (e) {
-      await statusStore.markFinished(success: false, message: e.toString());
-      return false;
+    if (task == _reminderRescheduleTaskName) {
+      return _executeReminderReschedule();
     }
+
+    return true;
   });
+}
+
+Future<bool> _executeBackgroundSync() async {
+  final statusStore = BackgroundSyncStatusStore();
+  await statusStore.markSyncing(message: 'background sync started');
+
+  try {
+    final result = await _runBackgroundSync();
+    await statusStore.markFinished(
+      success: result.success,
+      message: result.success ? null : result.errorMessage,
+    );
+    return result.success;
+  } catch (e) {
+    await statusStore.markFinished(success: false, message: e.toString());
+    return false;
+  }
+}
+
+Future<bool> _executeReminderReschedule() async {
+  try {
+    await _runReminderReschedule();
+    return true;
+  } catch (e) {
+    // ignore: avoid_print
+    debugPrint('Reminder reschedule failed: $e');
+    return false;
+  }
 }
 
 Future<SyncResult> _runBackgroundSync() async {
@@ -204,4 +260,25 @@ Future<SyncResult> _runBackgroundSync() async {
 /// Helper used by UI code to make sure the background sync subsystem exists.
 Future<void> initializeWebDavBackgroundSync() async {
   await backgroundSyncService.initialize();
+}
+
+// ---------------------------------------------------------------------------
+// Background reminder reschedule (standalone - no Riverpod)
+// ---------------------------------------------------------------------------
+
+/// Constructs and runs [ReminderService.rescheduleAllPendingReminders]
+/// in a background isolate without Riverpod.
+Future<void> _runReminderReschedule() async {
+  final notificationService = LocalNotificationService();
+  await notificationService.initialize();
+
+  final reminderService = ReminderService(
+    reminderRepository: ReminderRepository(),
+    todoRepository: TodoRepository(),
+    settingsRepository: SettingsRepository(),
+    calendarSyncService: CalendarSyncService(),
+    notificationService: notificationService,
+  );
+
+  await reminderService.rescheduleAllPendingReminders();
 }

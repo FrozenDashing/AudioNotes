@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
+import '../screens/category_picker_screen.dart';
 import '../utils/motion.dart';
 
 /// Floating action toolbar for batch operations on todos
@@ -14,9 +15,11 @@ class FloatingActionToolbar extends ConsumerWidget {
     final notifier = ref.read(todoListProvider.notifier);
     final hasCompletedTodos = summary.completedCount > 0;
     final hasSelectedTodos = notifier.selectedIds.isNotEmpty;
+    final isSelectionMode = notifier.isSelectionMode;
 
-    // Don't show toolbar if no completed todos and no selected todos.
-    if (!hasCompletedTodos && !hasSelectedTodos) {
+    // Show toolbar when there's completed todos OR when user entered selection mode
+    // (even if nothing selected yet) or when there are selected items.
+    if (!hasCompletedTodos && !isSelectionMode && !hasSelectedTodos) {
       return const SizedBox.shrink();
     }
 
@@ -42,20 +45,33 @@ class FloatingActionToolbar extends ConsumerWidget {
                     onPressed: () => _confirmDeleteAllCompleted(context, ref),
                     color: Colors.orange,
                   ),
-                if (hasSelectedTodos) ...[
+                if (hasSelectedTodos || isSelectionMode) ...[
                   const VerticalDivider(width: 1),
                   IconButton(
                     icon: const Icon(Icons.check),
                     tooltip: context.tr('toolbar.completeSelectedTooltip'),
-                    onPressed: () => _completeSelected(context, ref),
-                    color: Colors.green,
+                    onPressed: hasSelectedTodos
+                        ? () => _completeSelected(context, ref)
+                        : null,
+                    color: hasSelectedTodos ? Colors.green : Colors.grey,
                   ),
                   const VerticalDivider(width: 1),
                   IconButton(
                     icon: const Icon(Icons.delete),
                     tooltip: context.tr('toolbar.deleteSelectedTooltip'),
-                    onPressed: () => _confirmDeleteSelected(context, ref),
-                    color: Colors.red,
+                    onPressed: hasSelectedTodos
+                        ? () => _confirmDeleteSelected(context, ref)
+                        : null,
+                    color: hasSelectedTodos ? Colors.red : Colors.grey,
+                  ),
+                  const VerticalDivider(width: 1),
+                  IconButton(
+                    icon: const Icon(Icons.folder_shared),
+                    tooltip: context.tr('toolbar.groupSelectedTooltip'),
+                    onPressed: hasSelectedTodos
+                        ? () => _groupSelected(context, ref)
+                        : null,
+                    color: hasSelectedTodos ? Colors.blue : Colors.grey,
                   ),
                 ],
               ],
@@ -64,6 +80,34 @@ class FloatingActionToolbar extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _groupSelected(BuildContext context, WidgetRef ref) async {
+    final selectedIds =
+        ref.read(todoListProvider.notifier).selectedIds.toList();
+    if (selectedIds.isEmpty) return;
+
+    final categoryId = await Navigator.push<String?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CategoryPickerScreen(),
+      ),
+    );
+
+    if (categoryId == null) return;
+
+    await ref
+        .read(todoListProvider.notifier)
+        .moveSelectedToCategory(categoryId);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('toolbar.groupedCount',
+              params: {'count': '${selectedIds.length}'})),
+        ),
+      );
+    }
   }
 
   void _confirmDeleteAllCompleted(BuildContext context, WidgetRef ref) {

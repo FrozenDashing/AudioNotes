@@ -7,9 +7,6 @@ import '../l10n/app_i18n.dart';
 import '../providers/app_providers.dart';
 import '../models/todo_item.dart';
 // category model no longer needed here (groups derived via providers)
-import '../sync/background/webdav_background_sync.dart';
-import '../sync/coordinator/sync_coordinator.dart';
-import '../sync/providers/sync_provider.dart';
 import '../widgets/recording_overlay.dart';
 import '../widgets/todo_group_section.dart';
 import '../widgets/floating_action_toolbar.dart';
@@ -304,14 +301,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final theme = Theme.of(context);
     final groupOrderMap = ref.watch(groupOrderMapProvider);
     final todoNotifier = ref.read(todoListProvider.notifier);
-    final syncStatus = ref.watch(syncStatusProvider);
-    final backgroundSyncStatus = ref.watch(backgroundSyncStatusProvider);
     final isSelectionMode = todoNotifier.isSelectionMode;
-    final isBackgroundSyncing = backgroundSyncStatus.maybeWhen(
-      data: (state) => state.phase == BackgroundSyncPhase.syncing,
-      orElse: () => false,
-    );
-    final isSyncing = syncStatus == SyncStatus.syncing || isBackgroundSyncing;
     final todos = ref.watch(todoListProvider).maybeWhen(
           data: (items) => items,
           orElse: () => const <TodoItem>[],
@@ -411,16 +401,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
         actions: [
-          if (isSyncing)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: Tooltip(
-                message: context.tr('settings.sync.backgroundSyncing'),
-                child: const Icon(
-                  Icons.cloud_sync_rounded,
-                ),
-              ),
-            ),
           if (isSelectionMode)
             IconButton(
               icon: const Icon(Icons.close),
@@ -453,8 +433,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Recording overlay - only rebuilds when recording state or partial text changes
           const _RecordingOverlayWrapper(),
 
-          // ✅ Floating action toolbar for batch operations
-          const FloatingActionToolbar(),
+          // Floating action toolbar for batch operations
+          // ignore: prefer_const_constructors — must not be const to rebuild on selection change
+          FloatingActionToolbar(),
 
           // Model not ready overlay
           if (!_isModelReady && !_isCheckingModel)
@@ -753,30 +734,25 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
 
     final theme = Theme.of(context);
     final isLightTheme = theme.brightness == Brightness.light;
-    // Check if currently recording (affects display regardless of quick text mode)
-    final isRecording = recordingState == RecordingState.recording;
-
     final fab = FloatingActionButton.extended(
-      onPressed: isRecording
-          ? _getOnPressed(recordingState, ref, context)
-          : settings.enableQuickTextTodo
-              ? () => _openQuickTextDialog(context)
-              : _getOnPressed(recordingState, ref, context),
+      onPressed: settings.enableQuickTextTodo
+          ? () => _openQuickTextDialog(context)
+          : _getOnPressed(recordingState, ref, context),
       label: Text(
-        isRecording
-            ? context.tr('home.record.stop')
-            : settings.enableQuickTextTodo
-                ? context.tr('home.quickTodo')
-                : (recordingState == RecordingState.idle
-                    ? (widget.isModelReady
-                        ? context.tr('home.record.start')
-                        : context.tr('home.model.downloadFirst'))
+        settings.enableQuickTextTodo
+            ? context.tr('home.quickTodo')
+            : (recordingState == RecordingState.idle
+                ? (widget.isModelReady
+                    ? context.tr('home.record.start')
+                    : context.tr('home.model.downloadFirst'))
+                : recordingState == RecordingState.recording
+                    ? context.tr('home.record.stop')
                     : context.tr('home.record.processing')),
       ),
       icon: Icon(
-        isRecording
-            ? Icons.stop
-            : (settings.enableQuickTextTodo ? Icons.edit_outlined : Icons.mic),
+        settings.enableQuickTextTodo
+            ? Icons.edit_outlined
+            : (recordingState == RecordingState.idle ? Icons.mic : Icons.stop),
       ),
       backgroundColor:
           !widget.isModelReady && recordingState == RecordingState.idle
@@ -801,17 +777,13 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      onTap: isRecording
-          ? null
-          : settings.enableQuickTextTodo
-              ? () => _openQuickTextDialog(context)
-              : null,
-      onLongPress: isRecording
-          ? null
-          : settings.enableQuickTextTodo
-              ? () => _startRecording(
-                  ref.read(recordingStateProvider.notifier), context)
-              : null,
+      onTap: settings.enableQuickTextTodo
+          ? () => _openQuickTextDialog(context)
+          : null,
+      onLongPress: settings.enableQuickTextTodo
+          ? () => _startRecording(
+              ref.read(recordingStateProvider.notifier), context)
+          : null,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {

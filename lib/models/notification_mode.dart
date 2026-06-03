@@ -3,10 +3,7 @@ enum NotificationMode {
   /// No reminder mode selected
   none,
 
-  /// Use awesome notifications
-  awesome,
-
-  /// Use local notifications
+  /// Use local notifications (flutter_local_notifications + AlarmManager)
   local,
 
   /// Use system calendar sync
@@ -19,8 +16,6 @@ extension NotificationModeExtension on NotificationMode {
     switch (this) {
       case NotificationMode.none:
         return 'none';
-      case NotificationMode.awesome:
-        return 'awesome';
       case NotificationMode.local:
         return 'local';
       case NotificationMode.calendar:
@@ -33,7 +28,6 @@ extension NotificationModeExtension on NotificationMode {
       case 'none':
         return NotificationMode.none;
       case 'awesome':
-        return NotificationMode.local;
       case 'local':
         return NotificationMode.local;
       case 'calendar':
