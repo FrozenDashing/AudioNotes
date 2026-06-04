@@ -18,6 +18,8 @@ import '../models/todo_sort.dart';
 import '../models/todo_query_options.dart';
 import '../providers/settings_provider.dart';
 import '../utils/motion.dart';
+import '../sync/providers/sync_provider.dart';
+import '../sync/coordinator/sync_coordinator.dart';
 
 enum _HomeMenuAction { sort, toggleSelection, trash }
 
@@ -240,6 +242,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _checkModelStatus();
+    _triggerStartupSync();
+  }
+
+  void _triggerStartupSync() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final syncState = ref.read(syncProvider);
+      if (syncState.syncOnStartup && syncState.isConfigured) {
+        ref.read(syncProvider.notifier).syncNow();
+      }
+    });
   }
 
   /// Update stored group order map by writing to the global provider.
@@ -407,11 +419,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               tooltip: context.tr('home.selection.exit'),
               onPressed: () => todoNotifier.disableSelectionMode(),
             )
-          else
+          else ...[        
+            // Sync status icon
+            _SyncStatusIcon(),
             IconButton(
               icon: const Icon(Icons.settings),
               onPressed: () {
-                // Navigate to settings screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -420,7 +433,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
               },
             ),
-        ],
+          ],
+        ]
       ),
       body: Stack(
         children: [
@@ -494,6 +508,148 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onModelNotReady: _showModelDownloadDialog,
       ),
     );
+  }
+}
+
+/// Sync status icon with animated auto-dismiss on success, static on error.
+class _SyncStatusIcon extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_SyncStatusIcon> createState() => _SyncStatusIconState();
+}
+
+class _SyncStatusIconState extends ConsumerState<_SyncStatusIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacityAnim;
+  late final Animation<Offset> _slideAnim;
+
+  // Track whether we're currently fading out to prevent re-triggering.
+  SyncStatus? _lastStatus;
+  bool _isDismissing = false;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _opacityAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+    );
+    _slideAnim = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, -0.8),
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
+    );
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (mounted) setState(() {});
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _SyncStatusIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkDismiss();
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _startDismissTimer() {
+    _dismissTimer?.cancel();
+    _dismissTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      // Double-check still in success state before animating.
+      final currentStatus = ref.read(syncProvider).status;
+      if (currentStatus == SyncStatus.success) {
+        _isDismissing = true;
+        _controller.forward();
+      }
+    });
+  }
+
+  void _checkDismiss() {
+    final status = ref.read(syncProvider).status;
+    if (_lastStatus == SyncStatus.success && status != SyncStatus.success) {
+      // Was success, now changed — cancel pending dismiss and reset for next cycle.
+      _dismissTimer?.cancel();
+      _isDismissing = false;
+      _controller.reset();
+    }
+    _lastStatus = status;
+
+    // Start 2-second delay before dismiss only when transitioning TO success.
+    if (status == SyncStatus.success && !_isDismissing && _controller.isDismissed) {
+      _startDismissTimer();
+    }
+    // On error — cancel timer and stop any running animation, stay visible.
+    if (status == SyncStatus.error) {
+      _dismissTimer?.cancel();
+      _controller.reset();
+      _isDismissing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final syncState = ref.watch(syncProvider);
+    if (!syncState.isConfigured) return const SizedBox.shrink();
+
+    // After dismiss animation completes, hide.
+    if (_isDismissing && _controller.isCompleted) {
+      return const SizedBox.shrink();
+    }
+
+    // Reset state when sync starts again after being dismissed.
+    if (syncState.status != SyncStatus.success && _isDismissing) {
+      // Transition away from success (e.g. user triggered new sync) — reset.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _isDismissing = false;
+            _controller.reset();
+          });
+        }
+      });
+    }
+
+    final Widget icon = Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: IconButton(
+        icon: Icon(
+          Icons.cloud_sync,
+          color: switch (syncState.status) {
+            SyncStatus.syncing => Colors.blue,
+            SyncStatus.success => Colors.green,
+            SyncStatus.error => Colors.red,
+            _ => Colors.grey,
+          },
+        ),
+        tooltip: context.tr('settings.sync.syncNow'),
+        onPressed: syncState.status == SyncStatus.syncing
+            ? null
+            : () => ref.read(syncProvider.notifier).syncNow(),
+      ),
+    );
+
+    // Animate on success; static otherwise.
+    if (syncState.status == SyncStatus.success && !_controller.isDismissed) {
+      return SlideTransition(
+        position: _slideAnim,
+        child: FadeTransition(opacity: _opacityAnim, child: icon),
+      );
+    }
+
+    return icon;
   }
 }
 

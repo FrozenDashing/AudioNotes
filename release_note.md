@@ -1,6 +1,6 @@
 # AudioNotes Release Notes
 
-## Version 3.8.9 (2026-06-15)
+## Version 3.8.10 (2026-06-15)
 
 ### 🐛 问题修复
 
