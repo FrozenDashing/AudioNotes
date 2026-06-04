@@ -1,5 +1,21 @@
 # AudioNotes Release Notes
 
+## Version 3.8.9 (2026-06-15)
+
+### 🐛 问题修复
+
+#### 同步时 FOREIGN KEY 约束失败
+- **根因**：`SyncPlanner` 为 todo 和 reminder 独立生成计划。当 todo 被 `deleteLocal` 硬删除（级联删除关联的 reminder）后，下一轮同步中 planner 因 `local.isNotEmpty` 判断错误，将已不存在的 reminder 判定为 `download`，插入时 `todo_id` 指向已删除的 todo → `FOREIGN KEY constraint failed`
+- **修复**：将 planner 的"仅远端存在"分支从 `baselineHash != null && local.isNotEmpty` 改为 `baselineHash != null && hasEverCompletedSync`，用持久化标记替代空的 local map 判断
+- **防御加固**：`_upsertLocalReminder` 插入前检查 parent todo 是否存在，不存在则跳过
+
+#### 界面语言中英文混杂
+- **根因**：`SettingsNotifier.build()` 先返回硬编码 `languageCode: 'zh_CN'`，MaterialApp 以此构建。异步 `_loadSettings()` 完成后 state 更新为真实值（如 `'en'`），触发 MaterialApp 重建切换 locale。`flutter_i18n` 的 `FileTranslationLoader` 在此切换过程中缓存未完全刷新，部分 widget 显示中文、部分显示英文
+- **修复**：`main()` 中在 `runApp()` 前同步加载 `language_code`，通过 `setPreloadedLanguageCode()` 注入，MaterialApp 从第一帧使用正确 locale，永不发生 mid-build 切换
+
+### 🔧 技术改进
+- **同步 planner 新增 `hasEverCompletedSync` 参数**：持久化存储（SharedPreferences）标记设备是否完成过首次同步，替代 `local.isNotEmpty` 作为"仅远端存在"时的判断依据，兼顾新设备保护和 FK bug 修复
+
 ## Version 3.8.8 (2026-06-14)
 
 ### 🔧 技术改进
