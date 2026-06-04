@@ -81,6 +81,7 @@ class SyncPlanner {
     required String entityType,
     int? Function(T)? updatedAtFn,
     ConflictStrategy? strategy,
+    required bool hasEverCompletedSync,
   }) {
     final effectiveStrategy = strategy ?? defaultStrategy;
     final allIds = <String>{...local.keys, ...remote.keys};
@@ -201,8 +202,8 @@ class SyncPlanner {
       }
       // Only remote exists
       else if (localItem == null && remoteItem != null) {
-        if (baselineHash != null && local.isNotEmpty) {
-          // Was local before → local deleted it
+        if (baselineHash != null && hasEverCompletedSync) {
+          // Was local before → local deleted it (or cascade-deleted)
           items.add(SyncPlanItem(
             entityId: id,
             entityType: entityType,

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../data/database_helper.dart';
 import '../../models/todo_item.dart';
@@ -74,6 +75,23 @@ class SyncCoordinator {
     _planner.setDefaultStrategy(strategy);
   }
 
+  /// Tracks whether this device has ever completed a full sync cycle.
+  /// Persisted in SharedPreferences so it survives app restarts.
+  static const _keyHasEverCompletedSync = 'sync_has_ever_completed';
+  bool _hasEverCompletedSync = false;
+
+  Future<void> _loadHasEverCompletedSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasEverCompletedSync = prefs.getBool(_keyHasEverCompletedSync) ?? false;
+  }
+
+  Future<void> _markHasEverCompletedSync() async {
+    if (_hasEverCompletedSync) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasEverCompletedSync, true);
+    _hasEverCompletedSync = true;
+  }
+
   SyncCoordinator({
     required WebDavClientWrapper clientWrapper,
     ConflictStrategy conflictStrategy = ConflictStrategy.latestModified,
@@ -125,6 +143,9 @@ class SyncCoordinator {
     final stopwatch = Stopwatch()..start();
 
     try {
+      // 0. Load persisted sync flag (new-device guard)
+      await _loadHasEverCompletedSync();
+
       // 1. Ensure remote directory
       await _remoteStore.ensureDir();
 
@@ -189,6 +210,8 @@ class SyncCoordinator {
         );
         await _remoteStore.saveManifest(manifest);
 
+        await _markHasEverCompletedSync();
+
         stopwatch.stop();
         _lastSyncTime = DateTime.now();
         _status = SyncStatus.success;
@@ -220,6 +243,7 @@ class SyncCoordinator {
         entityType: 'todo',
         updatedAtFn: (dto) => dto.updatedAt,
         strategy: _conflictStrategy,
+        hasEverCompletedSync: _hasEverCompletedSync,
       );
 
       final categoryPlan = _planner.planSync<CategorySyncDto>(
@@ -229,6 +253,7 @@ class SyncCoordinator {
         hashFn: (dto) => _serializer.computeHash(jsonEncode(dto.toJson())),
         entityType: 'category',
         strategy: _conflictStrategy,
+        hasEverCompletedSync: _hasEverCompletedSync,
       );
 
       final tagPlan = _planner.planSync<TagSyncDto>(
@@ -238,6 +263,7 @@ class SyncCoordinator {
         hashFn: (dto) => _serializer.computeHash(jsonEncode(dto.toJson())),
         entityType: 'tag',
         strategy: _conflictStrategy,
+        hasEverCompletedSync: _hasEverCompletedSync,
       );
 
       final reminderPlan = _planner.planSync<ReminderSyncDto>(
@@ -247,6 +273,7 @@ class SyncCoordinator {
         hashFn: (dto) => _serializer.computeHash(jsonEncode(dto.toJson())),
         entityType: 'reminder',
         strategy: _conflictStrategy,
+        hasEverCompletedSync: _hasEverCompletedSync,
       );
 
       // 8. Execute planned actions
@@ -333,6 +360,8 @@ class SyncCoordinator {
         },
       );
       await _remoteStore.saveManifest(manifest);
+
+      await _markHasEverCompletedSync();
 
       stopwatch.stop();
       _lastSyncTime = DateTime.now();
@@ -812,6 +841,19 @@ class SyncCoordinator {
   }
 
   Future<void> _upsertLocalReminder(Database db, ReminderSyncDto dto) async {
+    // Guard: skip orphan reminders whose parent todo doesn't exist locally.
+    // This can happen when a todo was hard-deleted (cascading to reminders)
+    // but the remote still carries the reminder record, or when remote state
+    // is temporarily inconsistent.
+    final rows = await db.query(
+      'todo_item',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [dto.todoId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return;
+
     await db.insert(
       'reminders',
       {
