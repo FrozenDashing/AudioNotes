@@ -16,6 +16,16 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository();
 });
 
+/// Pre-loaded language code. Set from main() before runApp() so the first
+/// build uses the persisted value, avoiding a locale switch that would cause
+/// flutter_i18n's FileTranslationLoader to mix translations.
+String? _preloadedLanguageCode;
+
+/// Call this from main() before runApp() to seed the initial locale.
+void setPreloadedLanguageCode(String? code) {
+  _preloadedLanguageCode = code;
+}
+
 /// Notifier for managing settings state
 class SettingsNotifier extends Notifier<SettingsState> {
   late final SettingsRepository _repository;
@@ -23,7 +33,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
   @override
   SettingsState build() {
     _repository = ref.read(settingsRepositoryProvider);
-    final initial = SettingsState.initial();
+    final initial = SettingsState.initial().copyWith(
+      languageCode: _preloadedLanguageCode ?? 'zh_CN',
+    );
     state = initial;
     unawaited(_loadSettings());
     return initial;

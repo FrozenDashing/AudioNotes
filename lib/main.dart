@@ -22,6 +22,13 @@ import 'services/local_notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load persisted language before runApp so the MaterialApp locale
+  // is correct from the very first frame — this avoids a mid-build locale
+  // switch inside flutter_i18n's FileTranslationLoader that can produce
+  // mixed Chinese / English UI.
+  final prefs = await SharedPreferences.getInstance();
+  setPreloadedLanguageCode(prefs.getString('language_code'));
+
   // Initialize timezone database (required by flutter_local_notifications)
   tz.initializeTimeZones();
   final String timeZoneName =
