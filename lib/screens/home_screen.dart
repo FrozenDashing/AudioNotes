@@ -324,118 +324,117 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: isSelectionMode
-            ? IconButton(
-                icon: Icon(allSelected ? Icons.check_box : Icons.select_all),
-                tooltip: allSelected
-                    ? context.tr('home.selection.clearAll')
-                    : context.tr('home.selection.selectAll'),
-                onPressed: () {
-                  if (allSelected) {
-                    todoNotifier.clearSelection();
-                  } else {
-                    todoNotifier.selectAllTodos();
-                  }
-                },
-              )
-            : PopupMenuButton<_HomeMenuAction>(
-                icon: const Icon(Icons.more_horiz),
-                tooltip: context.tr('home.menu.more'),
-                position: PopupMenuPosition.under,
-                offset: const Offset(0, 8),
-                elevation: 10,
-                color: theme.colorScheme.surfaceContainerHighest,
-                surfaceTintColor: theme.colorScheme.surfaceTint,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          leading: isSelectionMode
+              ? IconButton(
+                  icon: Icon(allSelected ? Icons.check_box : Icons.select_all),
+                  tooltip: allSelected
+                      ? context.tr('home.selection.clearAll')
+                      : context.tr('home.selection.selectAll'),
+                  onPressed: () {
+                    if (allSelected) {
+                      todoNotifier.clearSelection();
+                    } else {
+                      todoNotifier.selectAllTodos();
+                    }
+                  },
+                )
+              : PopupMenuButton<_HomeMenuAction>(
+                  icon: const Icon(Icons.more_horiz),
+                  tooltip: context.tr('home.menu.more'),
+                  position: PopupMenuPosition.under,
+                  offset: const Offset(0, 8),
+                  elevation: 10,
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  surfaceTintColor: theme.colorScheme.surfaceTint,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  onSelected: (action) {
+                    switch (action) {
+                      case _HomeMenuAction.sort:
+                        _showSortSheet();
+                        break;
+                      case _HomeMenuAction.toggleSelection:
+                        todoNotifier.enableSelectionMode();
+                        break;
+                      case _HomeMenuAction.trash:
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TrashScreen(),
+                          ),
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: _HomeMenuAction.sort,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.sort_rounded,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(context.tr('home.sort.title')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _HomeMenuAction.toggleSelection,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.checklist_rounded,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(context.tr('home.selection.title')),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _HomeMenuAction.trash,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(context.tr('home.menu.trash')),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                onSelected: (action) {
-                  switch (action) {
-                    case _HomeMenuAction.sort:
-                      _showSortSheet();
-                      break;
-                    case _HomeMenuAction.toggleSelection:
-                      todoNotifier.enableSelectionMode();
-                      break;
-                    case _HomeMenuAction.trash:
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TrashScreen(),
-                        ),
-                      );
-                      break;
-                  }
+          actions: [
+            if (isSelectionMode)
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: context.tr('home.selection.exit'),
+                onPressed: () => todoNotifier.disableSelectionMode(),
+              )
+            else ...[
+              // Sync status icon
+              _SyncStatusIcon(),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: _HomeMenuAction.sort,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.sort_rounded,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(context.tr('home.sort.title')),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _HomeMenuAction.toggleSelection,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.checklist_rounded,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(context.tr('home.selection.title')),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _HomeMenuAction.trash,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(context.tr('home.menu.trash')),
-                      ],
-                    ),
-                  ),
-                ],
               ),
-        actions: [
-          if (isSelectionMode)
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: context.tr('home.selection.exit'),
-              onPressed: () => todoNotifier.disableSelectionMode(),
-            )
-          else ...[        
-            // Sync status icon
-            _SyncStatusIcon(),
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ]
-      ),
+            ],
+          ]),
       body: Stack(
         children: [
           // Todo list - only rebuilds when todos change
@@ -536,13 +535,17 @@ class _SyncStatusIconState extends ConsumerState<_SyncStatusIcon>
       duration: const Duration(milliseconds: 600),
     );
     _opacityAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
     );
     _slideAnim = Tween<Offset>(
       begin: Offset.zero,
       end: const Offset(0, -0.8),
     ).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -588,7 +591,9 @@ class _SyncStatusIconState extends ConsumerState<_SyncStatusIcon>
     _lastStatus = status;
 
     // Start 2-second delay before dismiss only when transitioning TO success.
-    if (status == SyncStatus.success && !_isDismissing && _controller.isDismissed) {
+    if (status == SyncStatus.success &&
+        !_isDismissing &&
+        _controller.isDismissed) {
       _startDismissTimer();
     }
     // On error — cancel timer and stop any running animation, stay visible.
@@ -890,25 +895,34 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
 
     final theme = Theme.of(context);
     final isLightTheme = theme.brightness == Brightness.light;
+    final isRecording = recordingState == RecordingState.recording;
+    final isProcessing = recordingState == RecordingState.recognizing;
+    final isQuickMode =
+        settings.enableQuickTextTodo && !isRecording && !isProcessing;
+
     final fab = FloatingActionButton.extended(
-      onPressed: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : _getOnPressed(recordingState, ref, context),
+      onPressed: isRecording || isProcessing
+          ? _getOnPressed(recordingState, ref, context)
+          : (isQuickMode
+              ? () => _openQuickTextDialog(context)
+              : _getOnPressed(recordingState, ref, context)),
       label: Text(
-        settings.enableQuickTextTodo
-            ? context.tr('home.quickTodo')
-            : (recordingState == RecordingState.idle
-                ? (widget.isModelReady
-                    ? context.tr('home.record.start')
-                    : context.tr('home.model.downloadFirst'))
-                : recordingState == RecordingState.recording
-                    ? context.tr('home.record.stop')
-                    : context.tr('home.record.processing')),
+        isRecording
+            ? context.tr('home.record.stop')
+            : isProcessing
+                ? context.tr('home.record.processing')
+                : (isQuickMode
+                    ? context.tr('home.quickTodo')
+                    : (widget.isModelReady
+                        ? context.tr('home.record.start')
+                        : context.tr('home.model.downloadFirst'))),
       ),
       icon: Icon(
-        settings.enableQuickTextTodo
-            ? Icons.edit_outlined
-            : (recordingState == RecordingState.idle ? Icons.mic : Icons.stop),
+        isRecording
+            ? Icons.stop
+            : isProcessing
+                ? Icons.hourglass_top
+                : (isQuickMode ? Icons.edit_outlined : Icons.mic),
       ),
       backgroundColor:
           !widget.isModelReady && recordingState == RecordingState.idle
@@ -933,13 +947,15 @@ class _RecordingFABState extends ConsumerState<_RecordingFAB>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      onTap: settings.enableQuickTextTodo
-          ? () => _openQuickTextDialog(context)
-          : null,
-      onLongPress: settings.enableQuickTextTodo
-          ? () => _startRecording(
-              ref.read(recordingStateProvider.notifier), context)
-          : null,
+      onTap: isRecording || isProcessing
+          ? null
+          : (isQuickMode ? () => _openQuickTextDialog(context) : null),
+      onLongPress: isRecording || isProcessing
+          ? null
+          : (isQuickMode
+              ? () => _startRecording(
+                  ref.read(recordingStateProvider.notifier), context)
+              : null),
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
