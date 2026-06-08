@@ -1,11 +1,73 @@
 import 'dart:async';
 
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Static callback handlers for awesome_notifications events.
+///
+/// All methods must be top-level and annotated with @pragma("vm:entry-point")
+/// so the Dart VM preserves them for native-to-Dart calls from background isolates.
+class NotificationController {
+  /// Callback invoked when the user taps a notification.
+  /// Set by main.dart during initialization.
+  static void Function(String todoId)? onNotificationTap;
+
+  /// Fires when a new notification or schedule is created.
+  @pragma('vm:entry-point')
+  static Future<void> onNotificationCreatedMethod(
+    ReceivedNotification receivedNotification,
+  ) async {
+    debugPrint(
+      'Notification created: id=${receivedNotification.id}, '
+      'channelKey=${receivedNotification.channelKey}',
+    );
+  }
+
+  /// Fires every time a notification is displayed on the system status bar.
+  @pragma('vm:entry-point')
+  static Future<void> onNotificationDisplayedMethod(
+    ReceivedNotification receivedNotification,
+  ) async {
+    debugPrint(
+      'Notification displayed: id=${receivedNotification.id}',
+    );
+  }
+
+  /// Fires when the user taps on a notification or action button.
+  @pragma('vm:entry-point')
+  static Future<void> onActionReceivedMethod(
+    ReceivedAction receivedAction,
+  ) async {
+    final payload = receivedAction.payload;
+    final todoId = payload?['todoId'];
+
+    debugPrint(
+      'Notification action received: id=${receivedAction.id}, '
+      'todoId=$todoId',
+    );
+
+    if (todoId != null && todoId.isNotEmpty) {
+      // Forward to the app-level callback for navigation.
+      // Set by main.dart during initialization.
+      onNotificationTap?.call(todoId);
+    }
+  }
+
+  /// Fires when the user dismisses a notification.
+  @pragma('vm:entry-point')
+  static Future<void> onDismissActionReceivedMethod(
+    ReceivedAction receivedAction,
+  ) async {
+    debugPrint(
+      'Notification dismissed: id=${receivedAction.id}',
+    );
+  }
+}
+
 /// Lightweight tracker for notification fired status.
 ///
-/// Usable from any isolate (main, WorkManager, android_alarm_manager_plus).
+/// Usable from any isolate (main, WorkManager).
 class NotificationFiredTracker {
   static const String _firedPrefix = 'notification.fired.';
 

@@ -8,6 +8,7 @@ import '../providers/app_providers.dart';
 import '../screens/category_picker_screen.dart';
 import '../screens/tag_picker_screen.dart';
 import '../utils/motion.dart';
+import '../utils/priority_color.dart';
 import 'completed_text.dart';
 
 enum _TodoCardLayoutMode {
@@ -360,6 +361,7 @@ class TodoItemCard extends ConsumerWidget {
                       context,
                       customTags: tags,
                       priorityLabel: priorityLabel,
+                      priority: todo.priority,
                       remindAt: todo.remindAt,
                       dueAt: todo.dueAt,
                       maxItems: 2,
@@ -465,6 +467,7 @@ class TodoItemCard extends ConsumerWidget {
                       context,
                       customTags: tags,
                       priorityLabel: priorityLabel,
+                      priority: todo.priority,
                       remindAt: todo.remindAt,
                       dueAt: todo.dueAt,
                       maxItems: 3,
@@ -527,6 +530,7 @@ class TodoItemCard extends ConsumerWidget {
             context,
             customTags: tags,
             priorityLabel: priorityLabel,
+            priority: todo.priority,
             remindAt: todo.remindAt,
             dueAt: todo.dueAt,
             maxItems: 4,
@@ -798,6 +802,7 @@ class TodoItemCard extends ConsumerWidget {
     BuildContext context, {
     required List<Tag> customTags,
     required String? priorityLabel,
+    required TodoPriority priority,
     required DateTime? remindAt,
     required DateTime? dueAt,
     required int maxItems,
@@ -837,7 +842,7 @@ class TodoItemCard extends ConsumerWidget {
           addChip(
             icon: Icons.flag_outlined,
             label: priorityLabel,
-            color: theme.colorScheme.outline,
+            color: resolvePriorityColor(context, priority),
             onTap: onPriorityTap,
           );
         }
@@ -926,6 +931,7 @@ class TodoItemCard extends ConsumerWidget {
     BuildContext context, {
     required List<Tag> customTags,
     required String? priorityLabel,
+    required TodoPriority priority,
     required DateTime? remindAt,
     required DateTime? dueAt,
     required int maxItems,
@@ -944,7 +950,7 @@ class TodoItemCard extends ConsumerWidget {
           context,
           icon: Icons.flag_outlined,
           label: priorityLabel,
-          color: theme.colorScheme.outline,
+          color: resolvePriorityColor(context, priority),
           compact: compact,
           onTap: onPriorityTap,
         ),

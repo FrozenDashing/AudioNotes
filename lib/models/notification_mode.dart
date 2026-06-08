@@ -3,7 +3,7 @@ enum NotificationMode {
   /// No reminder mode selected
   none,
 
-  /// Use local notifications (flutter_local_notifications + AlarmManager)
+  /// Use local notifications (awesome_notifications)
   local,
 
   /// Use system calendar sync

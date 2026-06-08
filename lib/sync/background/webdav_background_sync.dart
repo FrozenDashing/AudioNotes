@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../../data/reminder_repository.dart';
 import '../../data/todo_repository.dart';
@@ -269,8 +272,28 @@ Future<void> initializeWebDavBackgroundSync() async {
 /// Constructs and runs [ReminderService.rescheduleAllPendingReminders]
 /// in a background isolate without Riverpod.
 Future<void> _runReminderReschedule() async {
-  final notificationService = LocalNotificationService();
-  await notificationService.initialize();
+  // WorkManager 后台隔离区没有主隔离区的 tz 初始化（tz.local 是 late final），
+  // 必须在这里重新初始化，否则 zonedSchedule 会抛 LateInitializationError。
+  try {
+    tz_data.initializeTimeZones();
+    final String timeZoneName =
+        await FlutterTimezone.getLocalTimezone().then((v) => v.identifier);
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+  } catch (e) {
+    debugPrint('Background tz init failed: $e');
+    return;
+  }
+
+  // 在后台隔离区中重新初始化 timezone 在某些 OEM 机型上
+  // 可能触发原生崩溃（platform channel 绑定问题），必须用 try-catch 保护。
+  late final LocalNotificationService notificationService;
+  try {
+    notificationService = LocalNotificationService();
+    await notificationService.initialize();
+  } catch (e) {
+    debugPrint('Background notification service init failed: $e');
+    return;
+  }
 
   final reminderService = ReminderService(
     reminderRepository: ReminderRepository(),

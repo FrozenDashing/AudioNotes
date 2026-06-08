@@ -47,6 +47,18 @@
       "permissionDenied": "Notification permission is required for local reminders",
       "permissionRequired": "Notifications and exact alarm permission are required for local notifications"
     },
+    "permission": {
+      "title": "Permission Settings",
+      "description": "Please enable the following permissions for alarm reminders to work properly:",
+      "notification": "Notification Permission",
+      "notificationDesc": "Display reminders in the notification bar",
+      "exactAlarm": "Exact Alarm Permission",
+      "exactAlarmDesc": "Trigger reminders precisely at the scheduled time",
+      "batteryOptimization": "Ignore Battery Optimization",
+      "batteryOptimizationDesc": "Prevent the system from killing the app in the background",
+      "systemSettings": "System Alarm Permission",
+      "systemSettingsDesc": "Allow AudioNotes to appear in the system's alarm & reminder list"
+    },
     "appearance": {
       "themeColor": "Theme Color",
       "fontSize": "Font Size",

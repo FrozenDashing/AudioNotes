@@ -206,29 +206,25 @@ class CalendarSyncService {
   }
 
   /// Update calendar event from todo
+  ///
+  /// Skips getEvent / listEvents queries because they can trigger native
+  /// SIGSEGV on vivo/OPPO/小米 etc. OEM ROMs.  If [calendarEventId] is
+  /// stored, updates directly; otherwise falls back to creating a new event.
   Future<CalendarSyncResult> updateTodoEvent(TodoItem todo) async {
     try {
-      Event? existingEvent;
-      if (todo.calendarEventId != null) {
-        existingEvent = await _calendarPlugin.getEvent(todo.calendarEventId!);
-      }
-
-      existingEvent ??= await _findExistingTodoEvent(todo);
-
-      if (existingEvent == null) {
+      if (todo.calendarEventId == null) {
         return createTodoEvent(todo);
       }
 
-      // Update existing event
       final startTime = todo.remindAt ?? todo.dueAt!;
       final endTime = todo.dueAt?.add(const Duration(hours: 1)) ??
           todo.remindAt?.add(const Duration(hours: 1)) ??
           startTime.add(const Duration(hours: 1));
       final title = await _buildCalendarTitle(todo);
-      final calendarId = existingEvent.calendarId;
+      final calendarId = todo.calendarId;
 
       await _calendarPlugin.updateEvent(
-        eventId: existingEvent.eventId,
+        eventId: todo.calendarEventId!,
         title: title,
         description: Patch.set(todo.description ?? ''),
         url: Patch.set(_buildTodoUrl(todo.id)),
@@ -238,7 +234,7 @@ class CalendarSyncService {
 
       return CalendarSyncResult(
         status: CalendarSyncStatus.success,
-        calendarEventId: existingEvent.eventId,
+        calendarEventId: todo.calendarEventId,
         calendarId: calendarId,
       );
     } catch (e) {
@@ -262,6 +258,10 @@ class CalendarSyncService {
   }
 
   /// Sync todo with calendar
+  ///
+  /// Skips _findExistingTodoEvent (listEvents) because it triggers native
+  /// SIGSEGV on vivo/OPPO etc. OEM ROMs.  If [calendarEventId] is stored,
+  /// updates in-place; otherwise creates a new event.
   Future<CalendarSyncResult> syncTodoWithCalendar(TodoItem todo) async {
     try {
       if (todo.remindAt == null && todo.dueAt == null) {
@@ -269,16 +269,10 @@ class CalendarSyncService {
       }
 
       if (todo.calendarEventId == null) {
-        final existingEvent = await _findExistingTodoEvent(todo);
-        if (existingEvent != null) {
-          final updated = await updateTodoEvent(
-            todo.copyWith(calendarEventId: existingEvent.eventId),
-          );
-          return updated;
-        }
+        return createTodoEvent(todo);
       }
 
-      return await updateTodoEvent(todo);
+      return updateTodoEvent(todo);
     } catch (e) {
       if (e is CalendarSyncException &&
           e.status == CalendarSyncStatus.permissionDenied) {
@@ -291,19 +285,24 @@ class CalendarSyncService {
   }
 
   /// Remove todo from calendar
+  ///
+  /// If [todo.calendarEventId] is known, deletes directly by ID without
+  /// querying the calendar ContentProvider first.  This avoids native crashes
+  /// on some OEM ROMs (vivo/OPPO 等) whose getEvent/listEvents
+  /// ContentProvider queries can trigger SIGSEGV, while deleteEvent is a
+  /// simple ContentResolver.delete that does not.
+  ///
+  /// When no [calendarEventId] is stored, the method returns [idle] without
+  /// searching (search queries also trigger the same crash).  A small number
+  /// of orphaned calendar events is acceptable trade-off for not crashing.
   Future<CalendarSyncStatus> removeTodoFromCalendar(TodoItem todo) async {
     try {
-      Event? event;
       if (todo.calendarEventId != null) {
-        event = await _calendarPlugin.getEvent(todo.calendarEventId!);
-      }
-
-      event ??= await _findExistingTodoEvent(todo);
-
-      if (event != null) {
-        await deleteTodoEvent(event.eventId);
+        await _calendarPlugin.deleteEvent(eventId: todo.calendarEventId!);
         return CalendarSyncStatus.success;
       }
+
+      // No stored ID — skip the search (crashes on vivo/OPPO etc.).
       return CalendarSyncStatus.idle;
     } catch (e) {
       return CalendarSyncStatus.error;

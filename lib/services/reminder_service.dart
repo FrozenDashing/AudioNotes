@@ -38,7 +38,6 @@ class ReminderService {
   Future<void> initialize() async {
     await _notificationService.initialize();
     await _loadNotificationMode();
-    await _ensureNotificationPermissionState();
     await syncPendingReminders();
   }
 
@@ -49,18 +48,6 @@ class ReminderService {
   }
 
   NotificationMode get notificationMode => _notificationMode;
-
-  Future<void> _ensureNotificationPermissionState() async {
-    final allowed = await _notificationService.isNotificationAllowed();
-    if (allowed) {
-      return;
-    }
-
-    final granted = await _notificationService.requestNotificationPermission();
-    if (!granted && _notificationMode == NotificationMode.local) {
-      await setNotificationMode(NotificationMode.none);
-    }
-  }
 
   Future<void> _loadNotificationMode() async {
     try {
@@ -196,6 +183,17 @@ class ReminderService {
 
   Future<void> _scheduleLocalNotification(TodoItem todo) async {
     try {
+      final remindAt = todo.remindAt;
+      if (remindAt == null || !remindAt.isAfter(DateTime.now())) {
+        // 过去时间的提醒不调度，标记为已触发。
+        // zonedSchedule 要求 scheduledDate 必须在未来，否则抛异常。
+        foundation.debugPrint(
+          'Skipping past remindAt $remindAt, marking fired',
+        );
+        await markReminderFired(todo.id);
+        return;
+      }
+
       await _notificationService.scheduleTodoNotification(todo);
       final notificationId =
           _notificationService.getNotificationIdForTodo(todo.id);
@@ -203,7 +201,7 @@ class ReminderService {
         reminderId: todo.id,
         todoId: todo.id,
         notificationId: notificationId,
-        remindAt: todo.remindAt!,
+        remindAt: remindAt,
         fired: 0,
       );
 
@@ -250,6 +248,21 @@ class ReminderService {
   }
 
   Future<void> _cancelCalendarReminder(TodoItem todo) async {
+    // Skip calendar plugin calls when todo has no calendar data — avoids
+    // native platform-channel crashes on OEMs that silently revoke calendar
+    // permissions (小米 HyperOS, 华为 HarmonyOS, OPPO ColorOS 等).
+    if (todo.calendarEventId == null && todo.calendarMode == null) {
+      if (todo.syncStatus == 'cancelled') return;
+      final updatedTodo = todo.copyWith(
+        calendarEventId: null,
+        calendarMode: null,
+        syncStatus: 'cancelled',
+        syncedAt: DateTime.now(),
+      );
+      await _todoRepository.updateTodo(updatedTodo);
+      return;
+    }
+
     try {
       await _calendarSyncService.removeTodoFromCalendar(todo);
       final updatedTodo = todo.copyWith(

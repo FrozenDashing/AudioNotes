@@ -1,7 +1,6 @@
 package com.audionotes.audio_notes
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -66,6 +65,7 @@ class MainActivity : FlutterActivity() {
         return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getBoolean(PREF_WIDGET_RECORD_LAUNCH, false)
     }
+
 
     private fun storeWidgetRecordLaunchFlag(enabled: Boolean) {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

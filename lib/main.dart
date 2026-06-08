@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_i18n/flutter_i18n.dart';
@@ -7,9 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter_show_when_locked/flutter_show_when_locked.dart';
 
 import 'l10n/app_i18n.dart';
 import 'sync/background/webdav_background_sync.dart';
@@ -18,24 +18,35 @@ import 'models/settings_state.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
 import 'services/local_notification_service.dart';
+import 'services/notification_controller.dart';
+import 'services/foreground_task_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load persisted language before runApp so the MaterialApp locale
-  // is correct from the very first frame — this avoids a mid-build locale
-  // switch inside flutter_i18n's FileTranslationLoader that can produce
-  // mixed Chinese / English UI.
+  // is correct from the very first frame
   final prefs = await SharedPreferences.getInstance();
   setPreloadedLanguageCode(prefs.getString('language_code'));
 
-  // Initialize timezone database (required by flutter_local_notifications)
-  tz.initializeTimeZones();
-  final String timeZoneName =
-      await FlutterTimezone.getLocalTimezone().then((v) => v.identifier);
-  tz.setLocalLocation(tz.getLocation(timeZoneName));
-
+  // Initialize awesome_notifications
   await localNotificationService.initialize();
+
+  // Initialize android_alarm_manager_plus for reliable background scheduling
+  await AndroidAlarmManager.initialize();
+
+  // Cancel stale alarms from the old notification system
+  await localNotificationService.cancelStaleAlarms();
+
+  // Initialize foreground service to keep process alive (Chrono pattern)
+  ForegroundTaskService.init();
+  // Start foreground service — vivo won't kill the process while a
+  // foreground notification is visible
+  unawaited(ForegroundTaskService.start());
+
+  // Hide any stale lock-screen overlay (Chrono pattern)
+  await FlutterShowWhenLocked().hide();
+
   await initializeWebDavBackgroundSync();
 
   runApp(const ProviderScope(child: AudioNotesApp()));
@@ -65,6 +76,24 @@ class _AudioNotesAppState extends ConsumerState<AudioNotesApp> {
     _launchChannel.setMethodCallHandler(_handleLaunchMethodCall);
     unawaited(_consumeWidgetRecordingLaunch());
     unawaited(_initializeServices());
+
+    // Set up awesome_notifications event listeners
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: NotificationController.onActionReceivedMethod,
+      onNotificationCreatedMethod:
+          NotificationController.onNotificationCreatedMethod,
+      onNotificationDisplayedMethod:
+          NotificationController.onNotificationDisplayedMethod,
+      onDismissActionReceivedMethod:
+          NotificationController.onDismissActionReceivedMethod,
+    );
+
+    // Link notification tap to navigation handler
+    NotificationController.onNotificationTap = (todoId) {
+      foundation.debugPrint('Notification tapped: $todoId');
+      // Navigate to home screen — the HomeScreen will detect
+      // the launch todoId from its own route args or provider
+    };
   }
 
   Future<void> _handleLaunchMethodCall(MethodCall call) async {

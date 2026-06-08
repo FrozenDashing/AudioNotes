@@ -6,8 +6,11 @@ import '../../l10n/app_i18n.dart';
 import '../../models/notification_mode.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/settings_provider.dart';
+import 'permission_settings_screen.dart';
 
-/// Widget for selecting notification mode
+/// Widget for selecting notification mode.
+/// Permissions are handled on a dedicated screen — this widget
+/// only manages the mode selection and links to the permission page.
 class NotificationModeSelector extends ConsumerStatefulWidget {
   const NotificationModeSelector({super.key});
 
@@ -33,9 +36,25 @@ class _NotificationModeSelectorState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.tr('settings.notification.title'),
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.tr('settings.notification.title'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PermissionSettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.security, size: 18),
+                  label: Text(context.tr('settings.permission.title')),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -149,24 +168,7 @@ class _NotificationModeSelectorState
 
   Future<void> _selectMode(NotificationMode mode) async {
     try {
-      if (mode == NotificationMode.local) {
-        final granted = await _ensureLocalNotificationPermission();
-        if (!granted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  context.tr('settings.notification.permissionDenied'),
-                ),
-              ),
-            );
-          }
-          await ref.read(settingsProvider.notifier).setNotificationMode(
-                NotificationMode.none,
-              );
-          return;
-        }
-      } else if (mode == NotificationMode.calendar) {
+      if (mode == NotificationMode.calendar) {
         final granted = await _requestCalendarPermission();
         if (!granted) {
           return;
@@ -194,17 +196,6 @@ class _NotificationModeSelectorState
         );
       }
     }
-  }
-
-  Future<bool> _ensureLocalNotificationPermission() async {
-    final notificationService = ref.read(notificationServiceProvider);
-    final allowed = await notificationService.isNotificationAllowed();
-    if (allowed) {
-      return true;
-    }
-
-    final granted = await notificationService.requestNotificationPermission();
-    return granted;
   }
 
   Future<bool> _requestCalendarPermission() async {

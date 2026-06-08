@@ -160,6 +160,8 @@ class TodoItem {
           ? DateTime.fromMillisecondsSinceEpoch(json['synced_at'] as int)
           : null,
       syncStatus: json['sync_status'] as String?,
+      notificationId: json['notification_id'] as int?,
+      notificationMode: json['notification_mode'] as String?,
     );
   }
 
@@ -193,6 +195,8 @@ class TodoItem {
       'calendar_mode': calendarMode,
       'synced_at': syncedAt?.millisecondsSinceEpoch,
       'sync_status': syncStatus,
+      'notification_id': notificationId,
+      'notification_mode': notificationMode,
     };
   }
 

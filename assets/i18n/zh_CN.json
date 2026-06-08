@@ -47,6 +47,18 @@
       "permissionDenied": "需要通知权限才能使用本地提醒",
       "permissionRequired": "需要开启通知和精确闹钟权限才能使用本地通知"
     },
+    "permission": {
+      "title": "权限设置",
+      "description": "为了使闹钟提醒正常生效，请开启以下权限：",
+      "notification": "通知权限",
+      "notificationDesc": "用于在通知栏显示提醒",
+      "exactAlarm": "精确闹钟权限",
+      "exactAlarmDesc": "用于在指定时间准时触发提醒",
+      "batteryOptimization": "忽略电池优化",
+      "batteryOptimizationDesc": "防止系统在后台杀死应用导致提醒失效",
+      "systemSettings": "系统闹钟权限",
+      "systemSettingsDesc": "在系统设置中允许「语记」出现在闹钟与提醒列表中"
+    },
     "appearance": {
       "themeColor": "主题色",
       "fontSize": "字号",
